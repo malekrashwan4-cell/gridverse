@@ -48,7 +48,8 @@ export function getMemoryTarget(kind: GameKind, challenge: ChallengeConfig) {
   const tier = challenge.tier;
   if (kind === "flash-grid") return [...flashTarget, ...(tier >= 2 ? [3, 14] : []), ...(tier >= 3 ? [6, 10] : [])];
   if (kind === "symbol-recall") return [...symbolTarget, ...(tier >= 2 ? [0, 4] : []), ...(tier >= 3 ? [11, 15] : [])];
-  return [...hiddenPatternTarget, ...(tier >= 2 ? [5, 14] : []), ...(tier >= 3 ? [3, 12] : [])];
+  const hiddenPatternCells = hiddenPatternTarget.flatMap((value, index) => value ? [index] : []);
+  return [...hiddenPatternCells, ...(tier >= 2 ? [5, 14] : []), ...(tier >= 3 ? [3, 12] : [])];
 }
 
 export function getSequenceTarget(challenge: ChallengeConfig) {

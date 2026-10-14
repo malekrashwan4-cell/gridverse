@@ -115,7 +115,7 @@ export default function GamePage() {
   }, []);
 
   useEffect(() => {
-    if (status === "playing") boardRef.current?.querySelector("button:not([disabled])")?.focus();
+    if (status === "playing") boardRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])")?.focus();
   }, [status]);
 
   const pause = useCallback(() => {
