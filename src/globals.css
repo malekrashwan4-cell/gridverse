@@ -70,6 +70,7 @@
   html { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; }
   body { @apply bg-background text-foreground antialiased; margin: 0; min-width: 320px; }
   button, input, select { font: inherit; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
   ::selection { background: hsl(var(--primary) / .2); }
 }
 
@@ -78,6 +79,7 @@
   .tabular-nums { font-variant-numeric: tabular-nums; }
 }
 
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }

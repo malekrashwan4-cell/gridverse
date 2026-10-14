@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import GamePage from "./pages/GamePage";
+import StatisticsPage from "./pages/StatisticsPage";
 import {
   AuthPage, DailyPage, GameStatsPage, GamesPage, HelpPage, HistoryPage, LeaderboardsPage, ProfilePage, SettingsPage,
 } from "./pages/PlatformPages";
@@ -25,7 +26,7 @@ const App = () => (
           <Route path="/games/:slug/stats" element={<GameStatsPage />} />
           <Route path="/daily" element={<DailyPage />} />
           <Route path="/leaderboards" element={<LeaderboardsPage />} />
-          <Route path="/statistics" element={<GameStatsPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
