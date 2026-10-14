@@ -130,9 +130,10 @@ export function GameBoard(props: GameBoardProps) {
 }
 
 export function createInitialPuzzleState(kind: GameKind, challenge: ChallengeConfig): PuzzleState {
+  const safeChallenge = challenge?.tier === 2 || challenge?.tier === 3 ? challenge : { mode: "normal" as const, stage: 1 as const, tier: 1 as const, label: "Normal", description: "Learn the rule with generous recovery room.", maxMistakes: Number.POSITIVE_INFINITY, maxMoves: Number.POSITIVE_INFINITY, canUseHint: true, choiceRounds: 1 };
   const cells: Array<number | boolean | null> = Array(16).fill(null);
-  if (kind === "number-grid") getGivenIndices(kind, challenge).forEach((index) => { cells[index] = numberTarget[index]; });
-  if (kind === "binary-grid") getGivenIndices(kind, challenge).forEach((index) => { cells[index] = binaryTarget[index]; });
-  const lights = kind === "switchboard" ? getSwitchStart(challenge) : Array(9).fill(false) as boolean[];
+  if (kind === "number-grid") getGivenIndices(kind, safeChallenge).forEach((index) => { cells[index] = numberTarget[index]; });
+  if (kind === "binary-grid") getGivenIndices(kind, safeChallenge).forEach((index) => { cells[index] = binaryTarget[index]; });
+  const lights = kind === "switchboard" ? getSwitchStart(safeChallenge) : Array(9).fill(false) as boolean[];
   return { cells, selected: [], path: [0], lights, input: [], show: ["flash-grid", "symbol-recall", "sequence-memory", "hidden-pattern"].includes(kind), answer: null, choiceStreak: 0 };
 }

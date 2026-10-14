@@ -45,7 +45,7 @@ function getMoveFamily(kind: GameKind) {
 export function getChallengeConfig(kind: GameKind, mode: ChallengeMode, attemptNumber: number): ChallengeConfig {
   const stage = Math.min(3, Math.max(1, attemptNumber)) as 1 | 2 | 3;
   const baseTier = mode === "normal" ? 0 : mode === "hard" ? 1 : 2;
-  const tier = Math.min(3, baseTier + (stage > 1 ? 1 : 0)) as 1 | 2 | 3;
+  const tier = Math.min(3, Math.max(1, baseTier + (stage > 1 ? 1 : 0))) as 1 | 2 | 3;
   const family = getMoveFamily(kind);
   const [hardLimit, expertLimit] = moveLimits[family];
   const maxMoves = mode === "normal" ? Number.POSITIVE_INFINITY : mode === "hard" ? hardLimit - Math.max(0, stage - 2) * 4 : expertLimit - Math.max(0, stage - 2) * 2;

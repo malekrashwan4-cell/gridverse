@@ -15,8 +15,9 @@ const binaryGivens = {
 };
 
 export function getGivenIndices(kind: GameKind, challenge: ChallengeConfig) {
-  if (kind === "number-grid") return numberGivens[challenge.tier];
-  return binaryGivens[challenge.tier];
+  const tier = challenge.tier === 2 || challenge.tier === 3 ? challenge.tier : 1;
+  if (kind === "number-grid") return numberGivens[tier];
+  return binaryGivens[tier];
 }
 
 export function getMineTargets(challenge: ChallengeConfig) {
