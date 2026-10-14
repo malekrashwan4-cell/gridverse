@@ -44,7 +44,7 @@ export function getMineClues(challenge: ChallengeConfig) {
   });
 }
 
-export function getMemoryTarget(kind: GameKind, challenge: ChallengeConfig) {
+export function getMemoryTarget(kind: GameKind, challenge: ChallengeConfig): number[] {
   const tier = challenge.tier;
   if (kind === "flash-grid") return [...flashTarget, ...(tier >= 2 ? [3, 14] : []), ...(tier >= 3 ? [6, 10] : [])];
   if (kind === "symbol-recall") return [...symbolTarget, ...(tier >= 2 ? [0, 4] : []), ...(tier >= 3 ? [11, 15] : [])];
