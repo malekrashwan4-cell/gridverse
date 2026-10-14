@@ -18,6 +18,7 @@ const navigation = [
 
 function Brand() {
   return <span className="flex items-center gap-2.5"><span aria-hidden="true" className="grid h-9 w-9 grid-cols-2 gap-1 rounded-xl bg-primary p-2 shadow-[0_8px_20px_hsl(var(--primary)/.22)]"><span className="rounded-[3px] bg-white/95" /><span className="rounded-[3px] bg-white/65" /><span className="rounded-[3px] bg-white/65" /><span className="rounded-[3px] bg-white/95" /></span><span className="font-display text-[17px] font-extrabold tracking-[-.04em]">GRIDVERSE</span></span>;
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
