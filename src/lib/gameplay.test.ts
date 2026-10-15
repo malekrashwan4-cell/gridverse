@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { getGridPuzzle, getNonogramClues, getChoicePuzzle, isValidBinaryGrid, isValidNumberGrid, matchesNonogramClues, nonogramTarget, revealSafeCells } from "@/lib/gameplay";
+import { getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getChoicePuzzle, isValidBinaryGrid, isValidNumberGrid, matchesNonogramClues, nonogramTarget, revealSafeCells } from "@/lib/gameplay";
 import { getDailyPuzzleId, getDailyStreak } from "@/lib/progress";
+import { calculateScore, getScoreBreakdown } from "@/lib/scoring";
 
 const tiers = [1, 2, 3] as const;
 
@@ -27,12 +28,28 @@ describe("Gridverse puzzle rules", () => {
     expect(revealed).toContain(0);
   });
 
+  it("generates distinct mechanics with valid deterministic answer data", () => {
+    const pattern = getPatternShiftPuzzle(2);
+    expect(pattern.target).toEqual([0, 5, 10, 15]);
+    const odd = getOddOneOutPuzzle(2);
+    expect(odd.items.filter((item) => item.fill === "outline")).toHaveLength(1);
+    expect(getMatrixMysteryPuzzle(2).options[getMatrixMysteryPuzzle(2).answer]).toBe("5");
+    expect(getSequenceDetectivePuzzle(3).options[getSequenceDetectivePuzzle(3).answer]).toBe("◆◆◆");
+    expect(getDailyMysteryPuzzle(new Date("2026-01-03T12:00:00Z")).answer).toEqual([3, 2, 1, 0]);
+  });
+
   it("keeps the daily puzzle stable for a date and changes the identifier next day", () => {
     const today = new Date("2026-01-03T12:00:00Z");
     const tomorrow = new Date("2026-01-04T12:00:00Z");
     expect(getDailyPuzzleId(today)).toBe(getDailyPuzzleId(today));
     expect(getDailyPuzzleId(today)).not.toBe(getDailyPuzzleId(tomorrow));
     expect(getChoicePuzzle("daily-mystery").id).toMatch(/^daily-/);
+  });
+
+  it("keeps score non-negative and exposes its penalty breakdown", () => {
+    const breakdown = getScoreBreakdown("mine-logic", 900000, 100, 20, 10, "expert");
+    expect(breakdown.total).toBeGreaterThanOrEqual(0);
+    expect(calculateScore("mine-logic", 1000, 1, 0, 0, "hard")).toBeGreaterThan(calculateScore("mine-logic", 1000, 1, 2, 0, "hard"));
   });
 
   it("counts consecutive completed daily dates", () => {

@@ -4,7 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { Game, GameKind } from "@/data/games";
 import type { ChallengeConfig } from "@/lib/difficulty";
 import { getGivenIndices, getMemoryTarget, getMineClues, getMineTargets, getMirrorTarget, getPathObstacles, getSceneTargets, getSequenceTarget, getSwitchStart } from "@/lib/challenge-data";
-import { getChoicePuzzle, getGridPuzzle, getNonogramClues, getSymbolLayout, isAdjacent, isValidBinaryGrid, isValidNumberGrid, matchesNonogramClues, nonogramTarget, revealSafeCells, symbols } from "@/lib/gameplay";
+import { getChoicePuzzle, getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getSymbolLayout, isAdjacent, isValidBinaryGrid, isValidNumberGrid, matchesNonogramClues, nonogramTarget, revealSafeCells, symbols } from "@/lib/gameplay";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +120,34 @@ function isRegionSolution(cells: Array<number | boolean | null>) {
   });
 }
 
+function PatternFrame({ cells, interactive, onToggle }: { cells: number[]; interactive?: boolean; onToggle?: (index: number) => void }) {
+  return <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted/50 p-2">{Array.from({ length: 16 }, (_, index) => interactive ? <button type="button" key={index} aria-label={`Pattern cell ${index + 1}`} onClick={() => onToggle?.(index)} className={cn("aspect-square rounded-md border", cells.includes(index) ? "border-primary bg-primary" : "border-border/60 bg-card")} /> : <span key={index} className={cn("aspect-square rounded-md border border-border/60", cells.includes(index) ? "bg-primary" : "bg-card")} />)}</div>;
+}
+
+function ReasoningBoard({ game, state, setState, challenge, onComplete, onMistake, onMove, hintUsed }: GameBoardProps) {
+  if (game.kind === "pattern-shift") {
+    const puzzle = getPatternShiftPuzzle(challenge.stage);
+    const selected = state.cells.flatMap((cell, index) => cell === true ? [index] : []);
+    return <div className="w-full max-w-[560px] text-center"><Rule text="Construct the next frame in the visual sequence." hint={hintUsed ? puzzle.rule : "Study the first three frames, then fill the fourth frame and check it."} /><div className="mb-5 grid grid-cols-3 gap-2">{puzzle.frames.map((frame, index) => <div key={index}><p className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground">Frame {index + 1}</p><PatternFrame cells={frame} /></div>)}</div><div className="mb-5"><p className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-primary">Your next frame</p><PatternFrame cells={selected} interactive onToggle={(index) => { const cells = [...state.cells]; cells[index] = cells[index] === true ? false : true; onMove(); setState((current) => ({ ...current, cells })); }} /></div><Button type="button" onClick={() => { onMove(); if (selected.length === puzzle.target.length && selected.every((index) => puzzle.target.includes(index))) onComplete(); else onMistake(); }} className="rounded-xl font-bold">Check frame</Button></div>;
+  }
+  if (game.kind === "odd-one-out") {
+    const puzzle = getOddOneOutPuzzle(challenge.stage);
+    return <div className="w-full max-w-[520px] text-center"><Rule text="Identify the only tile that violates the visual rule." hint={hintUsed ? puzzle.rule : "Compare shape, fill, and rotation across all four tiles."} /><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{puzzle.items.map((item, index) => <button type="button" key={index} aria-label={`Odd one out tile ${index + 1}`} onClick={() => { onMove(); setState((current) => ({ ...current, answer: index })); if (index === puzzle.oddIndex) onComplete(); else onMistake(); }} className={cn("grid aspect-square place-items-center rounded-2xl border bg-card text-5xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", state.answer === index && "border-primary bg-primary/10")}><span style={{ transform: `rotate(${item.rotation}deg)`, opacity: item.fill === "outline" ? 0.45 : 1 }}>{item.shape}</span><small className="self-end pb-2 text-[10px] font-bold text-muted-foreground">Tile {index + 1}</small></button>)}</div></div>;
+  }
+  if (game.kind === "matrix-mystery") {
+    const puzzle = getMatrixMysteryPuzzle(challenge.stage);
+    return <div className="w-full max-w-[500px] text-center"><Rule text="Complete the 3×3 relationship matrix." hint={hintUsed ? puzzle.rule : "Look for the transformation shared by each row and column."} /><div className="mb-5 grid grid-cols-3 gap-2">{puzzle.cells.map((cell, index) => <span key={index} className={cn("grid aspect-square place-items-center rounded-xl border bg-card font-display text-2xl font-extrabold", cell === "?" && "border-dashed border-primary text-primary")}>{cell}</span>)}</div><div className="grid grid-cols-2 gap-2">{puzzle.options.map((option, index) => <ChoiceButton key={option} active={state.answer === index} onClick={() => { onMove(); setState((current) => ({ ...current, answer: index })); if (index === puzzle.answer) onComplete(); else onMistake(); }}>{option}</ChoiceButton>)}</div></div>;
+  }
+  if (game.kind === "sequence-detective") {
+    const puzzle = getSequenceDetectivePuzzle(challenge.stage);
+    return <div className="w-full max-w-[520px] text-center"><Rule text="Infer the next item in the changing sequence." hint={hintUsed ? puzzle.rule : "Track both the symbol and its position in the sequence."} /><div className="mb-5 flex items-center justify-center gap-2 text-3xl font-display font-extrabold">{puzzle.sequence.map((item, index) => <span key={index} className={cn("grid h-16 min-w-16 place-items-center rounded-xl border bg-card", item === "?" && "border-dashed border-primary text-primary")}>{item}</span>)}</div><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{puzzle.options.map((option, index) => <ChoiceButton key={option} active={state.answer === index} onClick={() => { onMove(); setState((current) => ({ ...current, answer: index })); if (index === puzzle.answer) onComplete(); else onMistake(); }}>{option}</ChoiceButton>)}</div></div>;
+  }
+  const puzzle = getDailyMysteryPuzzle();
+  const order = state.cells.slice(0, 4).map((cell, index) => typeof cell === "number" ? cell : index);
+  const selected = state.selected[0];
+  return <div className="w-full max-w-[560px] text-center"><Rule text="Reconstruct the witness timeline for today's mystery." hint={hintUsed ? puzzle.rule : "Select two stops to swap them. The same daily order is used all day."} /><div className="grid gap-3">{order.map((itemIndex, position) => <button type="button" key={`${itemIndex}-${position}`} onClick={() => { if (selected === undefined) { setState((current) => ({ ...current, selected: [position] })); return; } if (selected === position) { setState((current) => ({ ...current, selected: [] })); return; } const next = [...order]; [next[selected], next[position]] = [next[position], next[selected]]; onMove(); setState((current) => ({ ...current, cells: next, selected: [] })); if (next.every((value, index) => value === puzzle.answer[index])) onComplete(); }} className={cn("flex items-center justify-between rounded-2xl border bg-card px-4 py-4 text-left font-bold transition hover:border-primary/50", selected === position && "border-primary bg-primary/10")}><span className="mr-3 grid h-7 w-7 place-items-center rounded-lg bg-muted text-xs text-muted-foreground">{position + 1}</span><span className="flex-1">{puzzle.items[itemIndex]}</span><span className="text-xs text-muted-foreground">Select to swap</span></button>)}</div></div>;
+}
+
 function SpatialBoard({ game, state, setState, challenge, onComplete, onMistake, onMove, hintUsed }: GameBoardProps) {
   if (game.kind === "mirror-world") {
     const original = getMirrorTarget(challenge);
@@ -200,6 +228,7 @@ function isChoiceKind(kind: GameKind) {
 
 export function GameBoard(props: GameBoardProps) {
   if (["number-grid", "mine-logic", "nonogram", "binary-grid", "pathfinder", "switchboard"].includes(props.game.kind)) return <LogicBoard {...props} />;
+  if (["pattern-shift", "odd-one-out", "matrix-mystery", "sequence-detective", "daily-mystery"].includes(props.game.kind)) return <ReasoningBoard {...props} />;
   if (["mirror-world", "shape-packing", "rotation-puzzle", "cube-explorer", "shadow-match", "color-logic", "region-rules", "perfect-placement", "mystery-network", "one-move", "constraint-master", "rule-breaker"].includes(props.game.kind)) return <SpatialBoard {...props} />;
   if (isChoiceKind(props.game.kind)) return <ChoiceBoard {...props} />;
   return <MemoryBoard {...props} />;
@@ -212,6 +241,7 @@ export function createInitialPuzzleState(kind: GameKind, challenge: ChallengeCon
     puzzle.givens.forEach((index) => { cells[index] = puzzle.target[index]; });
   }
   const lights = kind === "switchboard" ? getSwitchStart(challenge) : Array(9).fill(false) as boolean[];
+  if (kind === "daily-mystery") cells.splice(0, 4, 0, 1, 2, 3);
   return { cells, selected: [], path: [0], lights, input: [], show: ["flash-grid", "symbol-recall", "sequence-memory", "hidden-pattern"].includes(kind), answer: null, choiceStreak: 0, flags: [], revealed: kind === "mine-logic" ? [0] : [], mineMode: "reveal" };
 }
 EOF

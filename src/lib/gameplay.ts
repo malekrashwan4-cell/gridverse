@@ -192,5 +192,53 @@ export function getSymbolLayout(stage: 1 | 2 | 3) {
   return positions.reduce<Record<number, number>>((layout, position, index) => { layout[position] = (index + stage) % symbols.length; return layout; }, {});
 }
 
+export type PatternShiftPuzzle = { frames: number[][]; target: number[]; rule: string };
+export type OddOneOutPuzzle = { items: Array<{ shape: string; fill: string; rotation: number }>; oddIndex: number; rule: string };
+export type MatrixMysteryPuzzle = { cells: string[]; options: string[]; answer: number; rule: string };
+export type SequenceDetectivePuzzle = { sequence: string[]; options: string[]; answer: number; rule: string };
+export type DailyMysteryPuzzle = { id: string; items: string[]; answer: number[]; rule: string };
+
+export function getPatternShiftPuzzle(stage = 1): PatternShiftPuzzle {
+  const patterns = [
+    { frames: [[0], [0, 1], [0, 1, 2]], target: [0, 1, 2, 3], rule: "One adjacent cell is added from left to right." },
+    { frames: [[0], [0, 5], [0, 5, 10]], target: [0, 5, 10, 15], rule: "The diagonal grows by one step on every frame." },
+    { frames: [[0, 3], [1, 2, 4, 7], [0, 3, 5, 6, 8, 11]], target: [1, 2, 4, 7, 9, 10, 12, 13], rule: "The four-corner shape rotates clockwise and adds its next outer pair." },
+  ];
+  return patterns[(stage - 1) % patterns.length];
+}
+
+export function getOddOneOutPuzzle(stage = 1): OddOneOutPuzzle {
+  const oddIndex = (stage - 1) % 4;
+  const items = Array.from({ length: 4 }, (_, index) => ({ shape: "◆", fill: "solid", rotation: 0 }));
+  if (stage % 3 === 1) items[oddIndex].rotation = 90;
+  if (stage % 3 === 2) items[oddIndex].fill = "outline";
+  if (stage % 3 === 0) items[oddIndex].shape = "●";
+  return { items, oddIndex, rule: stage % 3 === 1 ? "Three symbols share the same orientation." : stage % 3 === 2 ? "Three symbols share the same fill." : "Three symbols share the same shape." };
+}
+
+export function getMatrixMysteryPuzzle(stage = 1): MatrixMysteryPuzzle {
+  const puzzles = [
+    { cells: ["◆", "●", "◆", "●", "▲", "●", "◆", "▲", "?"], options: ["●", "◆", "▲", "■"], answer: 0, rule: "Each column repeats its top symbol in the bottom row." },
+    { cells: ["1", "2", "3", "2", "3", "4", "3", "4", "?"], options: ["4", "5", "6", "7"], answer: 1, rule: "Every row and column increases by one." },
+    { cells: ["◆", "◆◆", "◆◆◆", "●", "●●", "●●●", "▲", "▲▲", "?"], options: ["▲", "▲▲", "▲▲▲", "▲▲▲▲"], answer: 2, rule: "The third cell in each row combines the first two." },
+  ];
+  return puzzles[(stage - 1) % puzzles.length];
+}
+
+export function getSequenceDetectivePuzzle(stage = 1): SequenceDetectivePuzzle {
+  const puzzles = [
+    { sequence: ["↑", "→", "↓", "?"], options: ["↗", "←", "↙", "↑"], answer: 1, rule: "The arrow rotates 90 degrees clockwise." },
+    { sequence: ["●", "●●", "●●●", "?"], options: ["●", "●●●●", "◆◆◆◆", "●●"], answer: 1, rule: "One symbol is added on every step." },
+    { sequence: ["◆", "●", "◆◆", "●●", "?"], options: ["◆◆◆", "●●●", "◆", "●"], answer: 0, rule: "The symbol alternates while the count increases every two steps." },
+  ];
+  return puzzles[(stage - 1) % puzzles.length];
+}
+
+export function getDailyMysteryPuzzle(date = new Date()): DailyMysteryPuzzle {
+  const seed = date.getUTCFullYear() * 372 + date.getUTCMonth() * 31 + date.getUTCDate();
+  const orders = [[0, 1, 2, 3], [2, 0, 3, 1], [1, 3, 0, 2], [3, 2, 1, 0]];
+  return { id: `daily-${date.toISOString().slice(0, 10)}`, items: ["Gallery · 08:10", "Cafe · 08:25", "Observatory · 08:40", "Archive · 08:55"], answer: orders[seed % orders.length], rule: "Place the witness stops in chronological order without overlapping times." };
+}
+
 export const choicePuzzles = baseChoicePuzzles;
 EOF
