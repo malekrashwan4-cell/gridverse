@@ -1,6 +1,6 @@
 import type { GameKind } from "@/data/games";
 import type { ChallengeConfig } from "@/lib/difficulty";
-import { binaryTarget, flashTarget, hiddenPatternTarget, mirrorTarget, mineLocations, numberTarget, pathSolution, sequenceTarget, symbolTarget } from "@/lib/gameplay";
+import { binaryTarget, flashTarget, getGridPuzzle, hiddenPatternTarget, mirrorTarget, mineLocations, nonogramTarget, numberTarget, pathSolution, sequenceTarget, symbolTarget } from "@/lib/gameplay";
 
 const numberGivens = {
   1: [0, 3, 5, 6, 9, 10, 12, 15],
@@ -16,14 +16,18 @@ const binaryGivens = {
 
 export function getGivenIndices(kind: GameKind, challenge: ChallengeConfig) {
   const tier = challenge.tier === 2 || challenge.tier === 3 ? challenge.tier : 1;
-  if (kind === "number-grid") return numberGivens[tier];
-  return binaryGivens[tier];
+  if (kind === "number-grid") return getGridPuzzle("number-grid", tier, challenge.stage).givens;
+  if (kind === "binary-grid") return getGridPuzzle("binary-grid", tier, challenge.stage).givens;
+  return numberGivens[tier] ?? binaryGivens[tier];
 }
 
 export function getMineTargets(challenge: ChallengeConfig) {
-  if (challenge.tier === 1) return mineLocations;
-  if (challenge.tier === 2) return [1, 2, 6, 7, 11];
-  return [1, 2, 6, 7, 10, 14];
+  const layouts = {
+    1: [[...mineLocations], [1, 6, 10, 13]],
+    2: [[1, 2, 6, 7, 11], [1, 5, 6, 10, 14]],
+    3: [[1, 2, 6, 7, 10, 14], [1, 4, 6, 9, 11, 14]],
+  } as const;
+  return [...(layouts[challenge.tier][(challenge.stage - 1) % layouts[challenge.tier].length])];
 }
 
 export function getMineClues(challenge: ChallengeConfig) {
@@ -32,13 +36,11 @@ export function getMineClues(challenge: ChallengeConfig) {
     const row = Math.floor(index / 4);
     const column = index % 4;
     let count = 0;
-    for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
-      for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
-        if (rowOffset === 0 && columnOffset === 0) continue;
-        const nextRow = row + rowOffset;
-        const nextColumn = column + columnOffset;
-        if (nextRow >= 0 && nextRow < 4 && nextColumn >= 0 && nextColumn < 4 && mines.has(nextRow * 4 + nextColumn)) count += 1;
-      }
+    for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
+      if (rowOffset === 0 && columnOffset === 0) continue;
+      const nextRow = row + rowOffset;
+      const nextColumn = column + columnOffset;
+      if (nextRow >= 0 && nextRow < 4 && nextColumn >= 0 && nextColumn < 4 && mines.has(nextRow * 4 + nextColumn)) count += 1;
     }
     return count;
   });
@@ -75,7 +77,9 @@ export function getPathTarget(challenge: ChallengeConfig) {
 }
 
 export function getPathObstacles(challenge: ChallengeConfig) {
-  return challenge.tier === 1 ? [5, 6, 10] : [5, 6];
+  if (challenge.tier === 1) return [5, 6, 10];
+  if (challenge.tier === 2) return [5, 6, 8];
+  return [4, 5, 6];
 }
 
 function toggleSwitch(lights: boolean[], index: number) {
@@ -91,7 +95,13 @@ export function getSwitchStart(challenge: ChallengeConfig) {
   return lights;
 }
 
-export function getBaseTarget(kind: GameKind) {
-  if (kind === "number-grid") return numberTarget;
+export function getBaseTarget(kind: GameKind, challenge?: ChallengeConfig) {
+  if (kind === "number-grid") return challenge ? getGridPuzzle("number-grid", challenge.tier, challenge.stage).target : numberTarget;
+  if (kind === "binary-grid") return challenge ? getGridPuzzle("binary-grid", challenge.tier, challenge.stage).target : binaryTarget;
   return binaryTarget;
 }
+
+export function getNonogramTarget() {
+  return nonogramTarget;
+}
+EOF

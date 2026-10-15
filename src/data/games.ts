@@ -51,7 +51,7 @@ export const games: Game[] = [
   { id: "mine-logic", title: "Mine Logic", slug: "mine-logic", category: "Logic", difficulty: "Hard", duration: "4–7 min", players: "8.9k", description: "Read the clues, mark the mines, and clear the board safely.", kind: "mine-logic", accent: "#FF7A59", icon: Crosshair },
   { id: "nonogram", title: "Nonogram", slug: "nonogram", category: "Logic", difficulty: "Medium", duration: "5–8 min", players: "10.8k", description: "Reveal a hidden pixel picture from row and column clues.", kind: "nonogram", accent: "#2F9B86", icon: Blocks },
   { id: "binary-grid", title: "Binary Grid", slug: "binary-grid", category: "Logic", difficulty: "Medium", duration: "2–4 min", players: "9.7k", description: "Complete the zeros and ones: no triples, balanced lines.", kind: "binary-grid", accent: "#2E73E8", icon: Binary },
-  { id: "pathfinder", title: "Pathfinder", slug: "pathfinder", category: "Logic", difficulty: "Easy", duration: "2–3 min", players: "15.1k", description: "Connect start to finish using every open cell exactly once.", kind: "pathfinder", accent: "#E5A23C", icon: Waypoints },
+  { id: "pathfinder", title: "Pathfinder", slug: "pathfinder", category: "Logic", difficulty: "Easy", duration: "2–3 min", players: "15.1k", description: "Reach the endpoint through adjacent open cells without revisiting a cell.", kind: "pathfinder", accent: "#E5A23C", icon: Waypoints },
   { id: "region-rules", title: "Region Rules", slug: "region-rules", category: "Logic", difficulty: "Hard", duration: "5–9 min", players: "6.4k", description: "Divide the board into regions that satisfy every clue.", kind: "region-rules", accent: "#A15CE4", icon: SquareStack },
   { id: "perfect-placement", title: "Perfect Placement", slug: "perfect-placement", category: "Logic", difficulty: "Expert", duration: "6–10 min", players: "4.2k", description: "Place pieces so every line has one of each shape.", kind: "perfect-placement", accent: "#D65B94", icon: Target },
   { id: "pattern-shift", title: "Pattern Shift", slug: "pattern-shift", category: "Patterns", difficulty: "Medium", duration: "2–4 min", players: "11.6k", description: "Spot the transformation hiding between each frame.", kind: "pattern-shift", accent: "#635BFF", icon: Sparkles, featured: true },
@@ -86,4 +86,4 @@ export const categories: Array<{ label: string; icon: typeof Grid3X3 }> = [
   { label: "Deduction", icon: Network },
 ];
 
-export const getGame = (slug?: string) => games.find((game) => game.slug === slug) ?? games[0];
+export const getGame = (slug?: string) => games.find((game) => game.slug === slug);
