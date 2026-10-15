@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { games } from "@/data/games";
 import { getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getChoicePuzzle, isValidBinaryGrid, isValidNumberGrid, matchesNonogramClues, nonogramTarget, revealSafeCells } from "@/lib/gameplay";
 import { getDailyPuzzleId, getDailyStreak } from "@/lib/progress";
 import { calculateScore, getScoreBreakdown } from "@/lib/scoring";
@@ -50,6 +51,15 @@ describe("Gridverse puzzle rules", () => {
     const breakdown = getScoreBreakdown("mine-logic", 900000, 100, 20, 10, "expert");
     expect(breakdown.total).toBeGreaterThanOrEqual(0);
     expect(calculateScore("mine-logic", 1000, 1, 0, 0, "hard")).toBeGreaterThan(calculateScore("mine-logic", 1000, 1, 2, 0, "hard"));
+  });
+
+  it("exposes only the curated release lineup", () => {
+    expect(games).toHaveLength(14);
+    expect(games.map((game) => game.id)).toEqual([
+      "number-grid", "mine-logic", "nonogram", "binary-grid", "pathfinder",
+      "pattern-shift", "odd-one-out", "matrix-mystery", "mirror-world",
+      "flash-grid", "sequence-memory", "change-detector", "switchboard", "daily-mystery",
+    ]);
   });
 
   it("counts consecutive completed daily dates", () => {

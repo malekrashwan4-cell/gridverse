@@ -30,7 +30,6 @@ type GameBoardProps = {
   onComplete: () => void;
   onMistake: () => void;
   onMove: () => void;
-  onFail?: (reason: string) => void;
   hintUsed: boolean;
 };
 
@@ -63,13 +62,17 @@ function ChoiceBoard({ game, state, setState, challenge, onComplete, onMistake, 
   return <div className="w-full max-w-[560px] text-center"><Rule text={challenge.choiceRounds > 1 ? `${puzzle.prompt} · Round ${Math.min(state.choiceStreak + 1, challenge.choiceRounds)} of ${challenge.choiceRounds}` : puzzle.prompt} hint={`${puzzle.clue} ${challenge.choiceRounds > 1 ? "Consecutive correct answers are required." : ""}`} /><div className="mb-6 rounded-2xl border border-border/60 bg-muted/35 p-5"><div className="mb-4 text-[10px] font-bold uppercase tracking-[.18em] text-primary">{puzzle.display === "matrix" ? "Relationship matrix" : puzzle.display === "network" ? "Evidence board" : "Reasoning panel"}</div><div className={cn("mx-auto grid max-w-[390px] items-center gap-3", puzzle.display === "matrix" ? "grid-cols-2" : "grid-cols-4")}>{puzzle.visual.map((item, index) => <span key={`${item}-${index}`} className={cn("flex min-h-12 items-center justify-center rounded-xl border border-border/60 bg-card px-2 font-display text-xl font-extrabold", item === "?" && "border-dashed border-primary/50 text-primary")}>{item}</span>)}</div></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{puzzle.options.map((option, index) => <ChoiceButton key={`${puzzle.id}-${index}`} choiceIndex={index} active={state.answer === index} wrong={state.answer === index && index !== puzzle.answer} onClick={() => choose(index)}><span className="grid h-6 w-6 place-items-center rounded-lg bg-muted text-[10px] text-muted-foreground">{index + 1}</span>{option}</ChoiceButton>)}</div><p className="mt-4 text-[11px] font-semibold text-muted-foreground">{challenge.choiceRounds > 1 ? `${state.choiceStreak}/${challenge.choiceRounds} correct rounds` : "Wrong attempts cost a mistake, but the puzzle remains visible."}</p></div>;
 }
 
-function MineBoard({ state, setState, challenge, onComplete, onMistake, onMove, onFail = () => {}, hintUsed }: GameBoardProps) {
+function MineBoard({ state, setState, challenge, onComplete, onMistake, onMove, hintUsed }: GameBoardProps) {
   const mines = getMineTargets(challenge);
   const clues = getMineClues(challenge);
   const reveal = (index: number) => {
     if (state.revealed.includes(index) || state.flags.includes(index)) return;
     onMove();
-    if (mines.includes(index)) { onMistake(); onFail("A mine was revealed. That mistake counts against the run."); return; }
+    if (mines.includes(index)) {
+      onMistake();
+      setState((current) => ({ ...current, flags: current.flags.includes(index) ? current.flags : [...current.flags, index] }));
+      return;
+    }
     const revealed = revealSafeCells(index, clues, mines, state.revealed, state.flags);
     setState((current) => ({ ...current, revealed }));
     if (revealed.length >= 16 - mines.length) onComplete();
@@ -83,9 +86,9 @@ function MineBoard({ state, setState, challenge, onComplete, onMistake, onMove, 
   return <div className="w-full max-w-[430px]"><Rule text={`Reveal every safe cell. There are ${mines.length} hidden mines; numbered clues count adjacent mines.`} hint={hintUsed ? "Zero clues expand automatically. Flag only cells you have reason to suspect." : "Reveal mode opens safe areas; flag mode marks candidates without revealing them."} /><div className="mb-4 flex justify-center gap-2"><Button type="button" variant={state.mineMode === "reveal" ? "default" : "outline"} onClick={() => setState((current) => ({ ...current, mineMode: "reveal" }))} className="h-9 rounded-xl text-xs font-bold">Reveal</Button><Button type="button" variant={state.mineMode === "flag" ? "default" : "outline"} onClick={() => setState((current) => ({ ...current, mineMode: "flag" }))} className="h-9 rounded-xl text-xs font-bold"><Flag className="mr-1.5 h-3.5 w-3.5" /> Flag</Button></div><CellGrid>{(i) => { const revealed = state.revealed.includes(i); const flagged = state.flags.includes(i); return <GridCell label={`Mine logic cell ${i + 1}`} disabled={revealed} active={flagged} onClick={() => state.mineMode === "flag" ? toggleFlag(i) : reveal(i)} className={cn(revealed && "border-primary/20 bg-muted/50", flagged && "border-amber-500 bg-amber-500/10 text-amber-600")}>{flagged ? <Flag className="mx-auto h-4 w-4" /> : revealed ? <span className="font-display">{clues[i] || "·"}</span> : <span className="text-muted-foreground/30">?</span>}</GridCell>; }}</CellGrid><div className="mt-4 flex items-center justify-center gap-4 text-[11px] font-bold text-muted-foreground"><span>{state.revealed.length}/{16 - mines.length} safe cells</span><span>{state.flags.length}/{mines.length} flags</span></div></div>;
 }
 
-function LogicBoard({ game, state, setState, challenge, onComplete, onMistake, onMove, onFail, hintUsed }: GameBoardProps) {
+function LogicBoard({ game, state, setState, challenge, onComplete, onMistake, onMove, hintUsed }: GameBoardProps) {
   const kind = game.kind;
-  if (kind === "mine-logic") return <MineBoard game={game} state={state} setState={setState} challenge={challenge} onComplete={onComplete} onMistake={onMistake} onMove={onMove} onFail={onFail} hintUsed={hintUsed} />;
+  if (kind === "mine-logic") return <MineBoard game={game} state={state} setState={setState} challenge={challenge} onComplete={onComplete} onMistake={onMistake} onMove={onMove} hintUsed={hintUsed} />;
   if (kind === "number-grid" || kind === "binary-grid") {
     const binary = kind === "binary-grid";
     const givens = getGivenIndices(kind, challenge);

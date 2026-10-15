@@ -62,7 +62,7 @@ export default function AuthPage() {
     <section className="hidden bg-[#24284a] p-10 text-white lg:flex lg:flex-col lg:justify-between">
       <Link to="/" className="font-display text-[17px] font-extrabold tracking-[-.04em]">GRIDVERSE</Link>
       <div><div className="grid w-[250px] grid-cols-5 gap-2" aria-hidden="true">{Array.from({ length: 25 }).map((_, index) => <span key={index} className={cn("aspect-square rounded-md border border-white/10", [1, 7, 8, 13, 18, 23].includes(index) ? "bg-[#8278ff]" : "bg-white/[.035]")} />)}</div><h1 className="mt-10 max-w-[370px] font-display text-4xl font-extrabold leading-[1.03] tracking-[-.06em]">A better way to spend five quiet minutes.</h1><p className="mt-5 max-w-[330px] text-sm leading-6 text-white/60">Play thoughtful puzzles, build a streak, and keep every solve with you.</p></div>
-      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/40">28 puzzles · one curious community</p>
+      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/40">14 puzzles · one curious community</p>
     </section>
     <section className="flex items-center justify-center bg-background px-5 py-12"><div className="w-full max-w-[400px]">
       <Link to="/" className="mb-12 flex justify-center font-display text-[17px] font-extrabold lg:hidden">GRIDVERSE</Link>
