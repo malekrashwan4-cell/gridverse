@@ -8,9 +8,11 @@ import Index from "./pages/Index";
 import GamePage from "./pages/GamePage";
 import StatisticsPage from "./pages/StatisticsPage";
 import {
-  AuthPage, DailyPage, GameStatsPage, GamesPage, HelpPage, HistoryPage, LeaderboardsPage, ProfilePage, SettingsPage,
+  DailyPage, GameStatsPage, GamesPage, HelpPage, HistoryPage, LeaderboardsPage, ProfilePage, SettingsPage,
 } from "./pages/PlatformPages";
 import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,7 @@ const App = () => (
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

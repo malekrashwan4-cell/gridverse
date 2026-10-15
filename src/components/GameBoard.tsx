@@ -63,13 +63,13 @@ function ChoiceBoard({ game, state, setState, challenge, onComplete, onMistake, 
   return <div className="w-full max-w-[560px] text-center"><Rule text={challenge.choiceRounds > 1 ? `${puzzle.prompt} · Round ${Math.min(state.choiceStreak + 1, challenge.choiceRounds)} of ${challenge.choiceRounds}` : puzzle.prompt} hint={`${puzzle.clue} ${challenge.choiceRounds > 1 ? "Consecutive correct answers are required." : ""}`} /><div className="mb-6 rounded-2xl border border-border/60 bg-muted/35 p-5"><div className="mb-4 text-[10px] font-bold uppercase tracking-[.18em] text-primary">{puzzle.display === "matrix" ? "Relationship matrix" : puzzle.display === "network" ? "Evidence board" : "Reasoning panel"}</div><div className={cn("mx-auto grid max-w-[390px] items-center gap-3", puzzle.display === "matrix" ? "grid-cols-2" : "grid-cols-4")}>{puzzle.visual.map((item, index) => <span key={`${item}-${index}`} className={cn("flex min-h-12 items-center justify-center rounded-xl border border-border/60 bg-card px-2 font-display text-xl font-extrabold", item === "?" && "border-dashed border-primary/50 text-primary")}>{item}</span>)}</div></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{puzzle.options.map((option, index) => <ChoiceButton key={`${puzzle.id}-${index}`} choiceIndex={index} active={state.answer === index} wrong={state.answer === index && index !== puzzle.answer} onClick={() => choose(index)}><span className="grid h-6 w-6 place-items-center rounded-lg bg-muted text-[10px] text-muted-foreground">{index + 1}</span>{option}</ChoiceButton>)}</div><p className="mt-4 text-[11px] font-semibold text-muted-foreground">{challenge.choiceRounds > 1 ? `${state.choiceStreak}/${challenge.choiceRounds} correct rounds` : "Wrong attempts cost a mistake, but the puzzle remains visible."}</p></div>;
 }
 
-function MineBoard({ state, setState, challenge, onComplete, onMistake, onMove, onFail = () => { for (let attempt = 0; attempt <= challenge.maxMistakes; attempt += 1) onMistake(); }, hintUsed }: GameBoardProps) {
+function MineBoard({ state, setState, challenge, onComplete, onMistake, onMove, onFail = () => {}, hintUsed }: GameBoardProps) {
   const mines = getMineTargets(challenge);
   const clues = getMineClues(challenge);
   const reveal = (index: number) => {
     if (state.revealed.includes(index) || state.flags.includes(index)) return;
     onMove();
-    if (mines.includes(index)) { onMistake(); onFail("A mine was revealed. The run ended before the board could be completed."); return; }
+    if (mines.includes(index)) { onMistake(); onFail("A mine was revealed. That mistake counts against the run."); return; }
     const revealed = revealSafeCells(index, clues, mines, state.revealed, state.flags);
     setState((current) => ({ ...current, revealed }));
     if (revealed.length >= 16 - mines.length) onComplete();

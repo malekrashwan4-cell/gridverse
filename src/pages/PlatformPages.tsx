@@ -9,7 +9,7 @@ import { usePlayerResults } from "@/hooks/use-player-results";
 import { formatDuration } from "@/lib/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { ArrowRight, BarChart3, Check, Clock3, Flame, Search, Settings2, ShieldCheck, Sparkles, Trophy, Users } from "lucide-react";
