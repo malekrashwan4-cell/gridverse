@@ -38,4 +38,3 @@ export const mechanicRegistry: Record<GameKind, MechanicDefinition> = {
 export function getGameMechanic(kind: GameKind) {
   return mechanicRegistry[kind];
 }
-EOF

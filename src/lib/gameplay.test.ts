@@ -60,4 +60,3 @@ describe("Gridverse puzzle rules", () => {
     expect(getDailyStreak(results, new Date("2026-01-03T12:00:00Z"))).toBe(2);
   });
 });
-EOF

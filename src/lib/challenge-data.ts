@@ -104,4 +104,3 @@ export function getBaseTarget(kind: GameKind, challenge?: ChallengeConfig) {
 export function getNonogramTarget() {
   return nonogramTarget;
 }
-EOF

@@ -24,5 +24,3 @@ export function getScoreBreakdown(kind: GameKind, durationMs: number, moves: num
 export function calculateScore(...args: Parameters<typeof getScoreBreakdown>) {
   return getScoreBreakdown(...args).total;
 }
-EOF
-

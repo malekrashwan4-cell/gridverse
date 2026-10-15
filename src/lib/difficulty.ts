@@ -61,4 +61,3 @@ export function getSavedChallengeMode(gameId: string): ChallengeMode {
 export function saveChallengeMode(gameId: string, mode: ChallengeMode) {
   try { localStorage.setItem(`gridverse-difficulty-${gameId}`, mode); } catch { /* Settings remain in memory for this run. */ }
 }
-EOF

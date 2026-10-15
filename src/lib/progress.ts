@@ -86,4 +86,3 @@ export function formatDuration(durationMs?: number | null) {
   const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
   return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(totalSeconds % 60).padStart(2, "0")}`;
 }
-EOF

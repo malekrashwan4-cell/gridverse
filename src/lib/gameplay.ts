@@ -241,4 +241,3 @@ export function getDailyMysteryPuzzle(date = new Date()): DailyMysteryPuzzle {
 }
 
 export const choicePuzzles = baseChoicePuzzles;
-EOF

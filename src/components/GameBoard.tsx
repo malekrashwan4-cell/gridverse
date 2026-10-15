@@ -243,4 +243,3 @@ export function createInitialPuzzleState(kind: GameKind, challenge: ChallengeCon
   if (kind === "daily-mystery") cells.splice(0, 4, 0, 1, 2, 3);
   return { cells, selected: [], path: [0], lights, input: [], show: ["flash-grid", "symbol-recall", "sequence-memory", "hidden-pattern"].includes(kind), answer: null, choiceStreak: 0, flags: [], revealed: kind === "mine-logic" ? [0] : [], mineMode: "reveal" };
 }
-EOF
