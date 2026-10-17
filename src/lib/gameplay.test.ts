@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { games } from "@/data/games";
-import { getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getChoicePuzzle, isValidBinaryGrid, isValidNumberGrid, matchesNonogramClues, nonogramTarget, revealSafeCells } from "@/lib/gameplay";
+import { getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getChoicePuzzle, isValidBinaryGrid, isValidColorArrangement, isValidMirrorSolution, isValidNetwork, isValidNumberGrid, isValidPath, isValidSwitchboard, matchesNonogramClues, nonogramTarget, revealSafeCells } from "@/lib/gameplay";
 import { getDailyPuzzleId, getDailyStreak } from "@/lib/progress";
+import { getChallengeConfig } from "@/lib/difficulty";
+import { getMineClues, getMineTargets, getMemoryTarget, getSceneTargets, getSequenceTarget, getSwitchSolution, getSwitchStart, toggleSwitch } from "@/lib/challenge-data";
 import { calculateScore, getScoreBreakdown } from "@/lib/scoring";
 
 const tiers = [1, 2, 3] as const;
@@ -21,6 +23,26 @@ describe("Gridverse puzzle rules", () => {
 
   it("accepts any nonogram solution matching the calculated clues", () => {
     expect(matchesNonogramClues(nonogramTarget, getNonogramClues(nonogramTarget))).toBe(true);
+  });
+
+  it("keeps retained deterministic generators and validators aligned", () => {
+    tiers.forEach((tier) => {
+      const challenge = getChallengeConfig("mine-logic", "normal", tier);
+      const mines = getMineTargets(challenge);
+      const clues = getMineClues(challenge);
+      expect(mines).toHaveLength(new Set(mines).size);
+      expect(clues).toHaveLength(16);
+      expect(getMemoryTarget("flash-grid", challenge)).toHaveLength(new Set(getMemoryTarget("flash-grid", challenge)).size);
+      expect(getSequenceTarget(challenge)).toHaveLength(new Set(getSequenceTarget(challenge)).size);
+      expect(getSceneTargets(challenge).changed.every((cell) => !getSceneTargets(challenge).before.includes(cell))).toBe(true);
+    });
+    expect(isValidPath([0, 1, 2, 3, 7, 11, 15], [5, 6, 10])).toBe(true);
+    expect(isValidPath([0, 1, 5, 9, 15], [5, 6, 10])).toBe(false);
+    expect(isValidSwitchboard(Array(9).fill(true))).toBe(true);
+    expect(isValidSwitchboard(Array(8).fill(true))).toBe(false);
+    expect(isValidMirrorSolution([true, false], [true, false])).toBe(true);
+    expect(isValidColorArrangement([0, 1, 2, 3])).toBe(false);
+    expect(isValidNetwork([[0, 1], [0, 2], [1, 3], [2, 3], [0, 3], [1, 2]], [true, false, true, true, false, true])).toBe(true);
   });
 
   it("expands zero-clue mine areas without revealing mines", () => {

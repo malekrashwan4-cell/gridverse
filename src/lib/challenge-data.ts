@@ -82,16 +82,19 @@ export function getPathObstacles(challenge: ChallengeConfig) {
   return [4, 5, 6];
 }
 
-function toggleSwitch(lights: boolean[], index: number) {
+export function toggleSwitch(lights: boolean[], index: number) {
   [index, index - 1, index + 1, index - 3, index + 3].forEach((candidate) => {
     if (candidate >= 0 && candidate < 9 && !(candidate === index - 1 && index % 3 === 0) && !(candidate === index + 1 && index % 3 === 2)) lights[candidate] = !lights[candidate];
   });
 }
 
+export function getSwitchSolution(challenge: ChallengeConfig) {
+  return challenge.tier === 1 ? [0, 4, 8] : challenge.tier === 2 ? [0, 4, 8, 1, 7] : [0, 4, 8, 1, 7, 3];
+}
+
 export function getSwitchStart(challenge: ChallengeConfig) {
-  const solution = challenge.tier === 1 ? [0, 4, 8] : challenge.tier === 2 ? [0, 4, 8, 1, 7] : [0, 4, 8, 1, 7, 3];
   const lights = Array(9).fill(true) as boolean[];
-  solution.forEach((index) => toggleSwitch(lights, index));
+  getSwitchSolution(challenge).forEach((index) => toggleSwitch(lights, index));
   return lights;
 }
 

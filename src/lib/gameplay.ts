@@ -65,7 +65,9 @@ export function seededRandom(seed: number) {
   };
 }
 
-export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 | 3, stage = 1) {
+export type GridPuzzle = { target: number[]; givens: number[] };
+
+export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 | 3, stage = 1): GridPuzzle {
   const random = seededRandom((kind === "number-grid" ? 41 : 97) + tier * 17 + stage * 31);
   if (kind === "binary-grid") {
     const rows = [
@@ -111,6 +113,29 @@ export function isValidBinaryGrid(cells: Array<number | boolean | null>) {
   for (let line = 0; line < 4; line += 1) lines.push(cells.slice(line * 4, line * 4 + 4) as number[], [cells[line], cells[line + 4], cells[line + 8], cells[line + 12]] as number[]);
   if (lines.some((line) => line.filter(Boolean).length !== 2 || line.some((value, index) => index < 2 && value === line[index + 1] && value === line[index + 2]))) return false;
   return new Set(lines.slice(0, 4).map((line) => line.join(""))).size === 4 && new Set(lines.slice(4).map((line) => line.join(""))).size === 4;
+}
+
+export function isValidPath(path: number[], obstacles: number[], end = 15) {
+  if (path.length < 2 || path[0] !== 0 || path[path.length - 1] !== end) return false;
+  const blocked = new Set(obstacles);
+  return new Set(path).size === path.length && path.every((cell, index) => cell >= 0 && cell < 16 && !blocked.has(cell) && (index === 0 || isAdjacent(path[index - 1], cell)));
+}
+
+export function isValidSwitchboard(lights: boolean[]) {
+  return lights.length === 9 && lights.every(Boolean);
+}
+
+export function isValidMirrorSolution(cells: Array<number | boolean | null>, target: boolean[]) {
+  return cells.length === target.length && cells.every((cell, index) => Boolean(cell) === target[index]);
+}
+
+export function isValidColorArrangement(cells: Array<number | boolean | null>) {
+  const values = cells.slice(0, 4);
+  return values.length === 4 && values.every((value): value is number => typeof value === "number") && new Set(values).size === 4 && values[0] === 0 && Math.abs(values.indexOf(1) - values.indexOf(2)) === 1 && Math.abs(values.indexOf(3) - values.indexOf(0)) > 1;
+}
+
+export function isValidNetwork(edges: Array<[number, number]>, selected: boolean[]) {
+  return selected.filter(Boolean).length === 4 && [0, 1, 2, 3].every((node) => edges.reduce((degree, [from, to], index) => degree + (selected[index] && (from === node || to === node) ? 1 : 0), 0) === 2);
 }
 
 export function getLineClues(values: boolean[]) {
