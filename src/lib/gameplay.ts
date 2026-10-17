@@ -89,7 +89,7 @@ export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 |
     [4, 3, 2, 1],
   ];
   const symbolsOrder = [1, 2, 3, 4].sort(() => random() - 0.5);
-  const target = Array.from({ length: 4 }, (_, row) => Array.from({ length: 4 }, (_, column) => symbolsOrder[base[(row + stage) % 4][column] - 1]));
+  const target = Array.from({ length: 4 }, (_, row) => Array.from({ length: 4 }, (_, column) => symbolsOrder[base[(row + stage) % 4][column] - 1])).flat();
   const clueCount = tier === 1 ? 10 : tier === 2 ? 8 : 6;
   const givens = Array.from({ length: 16 }, (_, index) => index).sort(() => random() - 0.5).slice(0, clueCount).sort((a, b) => a - b);
   return { target, givens };
