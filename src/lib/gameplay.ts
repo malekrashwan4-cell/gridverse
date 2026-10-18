@@ -161,6 +161,11 @@ export function matchesNonogramClues(cells: Array<number | boolean | null>, clue
   return clues.rows.every((clue, row) => JSON.stringify(clue) === JSON.stringify(getLineClues(filled.slice(row * 4, row * 4 + 4)))) && clues.columns.every((clue, column) => JSON.stringify(clue) === JSON.stringify(getLineClues([filled[column], filled[column + 4], filled[column + 8], filled[column + 12]])));
 }
 
+export function isValidNonogramSolution(cells: Array<number | boolean | null>, target: boolean[]) {
+  if (cells.length !== target.length || cells.some((cell) => cell === null)) return false;
+  return cells.every((cell, index) => Boolean(cell) === target[index]);
+}
+
 export function revealSafeCells(start: number, clues: number[], mines: number[], revealed: number[], flags: number[]) {
   if (mines.includes(start) || flags.includes(start)) return revealed;
   const next = new Set(revealed);

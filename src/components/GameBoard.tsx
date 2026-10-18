@@ -4,7 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { Game, GameKind } from "@/data/games";
 import type { ChallengeConfig } from "@/lib/difficulty";
 import { getGivenIndices, getMemoryTarget, getMineClues, getMineTargets, getMirrorTarget, getPathObstacles, getSceneTargets, getSequenceTarget, getSwitchStart, toggleSwitch } from "@/lib/challenge-data";
-import { getChoicePuzzle, getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getSymbolLayout, isAdjacent, isValidBinaryGrid, isValidColorArrangement, isValidMirrorSolution, isValidNetwork, isValidNumberGrid, isValidPath, isValidSwitchboard, matchesNonogramClues, nonogramTarget, revealSafeCells, symbols } from "@/lib/gameplay";
+import { getChoicePuzzle, getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getSymbolLayout, isAdjacent, isValidBinaryGrid, isValidColorArrangement, isValidMirrorSolution, isValidNetwork, isValidNonogramSolution, isValidNumberGrid, isValidPath, isValidSwitchboard, matchesNonogramClues, nonogramTarget, revealSafeCells, symbols } from "@/lib/gameplay";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -96,9 +96,81 @@ function LogicBoard({ game, state, setState, challenge, onComplete, onMistake, o
     return <div className="w-full max-w-[430px]"><Rule text={binary ? "Complete the binary grid: every row and column has two of each value, with no triples or duplicate lines." : "Fill every row and column with 1–4 exactly once. Any valid Latin grid is accepted."} hint={hintUsed ? "Use locked clues as anchors and eliminate candidates from each line." : binary ? "Tap to cycle 0 → 1 → blank." : "Tap to cycle 1 → 2 → 3 → 4 → blank."} /><CellGrid>{(i) => { const given = givens.includes(i); return <GridCell label={`${binary ? "Binary" : "Number"} cell ${i + 1}`} disabled={given} onClick={() => { const cells = [...state.cells]; cells[i] = binary ? cells[i] === null ? 0 : cells[i] === 0 ? 1 : null : cells[i] === null ? 1 : Number(cells[i]) === 4 ? null : Number(cells[i]) + 1; onMove(); setState((current) => ({ ...current, cells })); if (cells.every((cell) => cell !== null)) { if (complete(cells)) onComplete(); else onMistake(); } }} className="font-display text-xl">{state.cells[i] ?? <span className="text-muted-foreground/30">·</span>}</GridCell>; }}</CellGrid><p className="mt-4 text-center text-[11px] font-semibold text-muted-foreground">{givens.length} generated clues · stage {challenge.stage}/3</p></div>;
   }
   if (kind === "nonogram") {
-    const clues = getNonogramClues(nonogramTarget);
-    return <div className="w-full max-w-[430px]"><Rule text="Reveal the pixel picture from the actual row and column clues." hint={hintUsed ? "Clues describe runs of adjacent filled cells, not total cells in a row." : "Tap: filled → marked empty → unknown. Any pattern matching the clues is valid."} /><div className="mb-4 grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-muted-foreground">{clues.columns.map((clue, index) => <span key={index}>{clue.join(" ")}</span>)}</div><CellGrid>{(i) => <GridCell label={`Nonogram cell ${i + 1}`} onClick={() => { const cells = [...state.cells]; cells[i] = cells[i] === null ? true : cells[i] === true ? false : null; onMove(); setState((current) => ({ ...current, cells })); if (cells.every((cell) => cell !== null)) { if (matchesNonogramClues(cells, clues)) onComplete(); else onMistake(); } }} className={state.cells[i] === false ? "border-dashed bg-muted/30" : state.cells[i] === true ? "border-primary bg-primary" : "bg-card"}>{state.cells[i] === false ? <X className="mx-auto h-4 w-4 text-muted-foreground/60" /> : state.cells[i] === null ? <span className="text-muted-foreground/25">·</span> : null}</GridCell>}</CellGrid><div className="mt-4 flex justify-between text-[10px] font-bold text-muted-foreground"><span>Rows: {clues.rows.map((clue) => clue.join(" ")).join(" · ")}</span><span>Columns describe runs</span></div></div>;
-  }
+      const clues = getNonogramClues(nonogramTarget);
+      const target = nonogramTarget;
+      const [pendingCell, setPendingCell] = useState<number | null>(null);
+      const [tapTimer, setTapTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+      const TAP_INTERVAL = 350;
+  
+      const clearPending = () => {
+        if (tapTimer) {
+          clearTimeout(tapTimer);
+          setTapTimer(null);
+        }
+        setPendingCell(null);
+      };
+  
+      const handleTap = (i: number, e?: React.MouseEvent | React.TouchEvent) => {
+        e?.preventDefault();
+        e?.stopPropagation();
+        onMove();
+  
+        // If tapping a different cell, cancel previous pending
+        if (pendingCell !== null && pendingCell !== i) {
+          clearPending();
+        }
+  
+        const currentValue = state.cells[i];
+  
+        if (pendingCell === i) {
+          // Second tap on same cell within interval
+          clearPending();
+          if (currentValue === true) {
+            // Filled → eliminate
+            setState((current) => {
+              const cells = [...current.cells];
+              cells[i] = false;
+              if (isValidNonogramSolution(cells, target)) onComplete();
+              return { ...current, cells };
+            });
+          } else {
+            // Unknown or eliminated → fill
+            setState((current) => {
+              const cells = [...current.cells];
+              cells[i] = true;
+              if (isValidNonogramSolution(cells, target)) onComplete();
+              return { ...current, cells };
+            });
+          }
+          return;
+        }
+  
+        // First tap: arm the cell
+        setPendingCell(i);
+        const timer = setTimeout(() => {
+          // Timeout: single tap = eliminate
+          setPendingCell(null);
+          setTapTimer(null);
+          setState((current) => {
+            const cells = [...current.cells];
+            if (currentValue !== false) {
+              cells[i] = false;
+            }
+            return { ...current, cells };
+          });
+        }, TAP_INTERVAL);
+        setTapTimer(timer);
+      };
+  
+      // Tap elsewhere on board cancels pending selection
+      const handleBoardTap = () => {
+        if (pendingCell !== null) {
+          clearPending();
+        }
+      };
+  
+      return <div className="w-full max-w-[430px]" onClick={handleBoardTap}><Rule text="Reveal the pixel picture from the actual row and column clues." hint={hintUsed ? "Clues describe runs of adjacent filled cells, not total cells in a row." : "Single tap eliminates a cell. Double-tap the same cell within 350ms to fill it."} /><div className="mb-4 grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-muted-foreground">{clues.columns.map((clue, index) => <span key={index}>{clue.join(" ")}</span>)}</div><CellGrid>{(i) => <GridCell label={`Nonogram cell ${i + 1}`} onClick={(e) => handleTap(i, e)} className={state.cells[i] === false ? "border-dashed bg-muted/30" : state.cells[i] === true ? "border-primary bg-primary" : pendingCell === i ? "border-amber-400 bg-amber-400/20" : "bg-card"}>{state.cells[i] === false ? <X className="mx-auto h-4 w-4 text-muted-foreground/60" /> : state.cells[i] === null ? <span className="text-muted-foreground/25">·</span> : null}</GridCell>}</CellGrid><div className="mt-4 flex justify-between text-[10px] font-bold text-muted-foreground"><span>Rows: {clues.rows.map((clue) => clue.join(" ")).join(" · ")}</span><span>Columns describe runs</span></div></div>;
+    }
   if (kind === "pathfinder") {
     const obstacles = getPathObstacles(challenge);
     const end = 15;
