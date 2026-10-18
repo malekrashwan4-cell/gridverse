@@ -35,6 +35,14 @@ describe("Gridverse puzzle rules", () => {
       expect(getMemoryTarget("flash-grid", challenge)).toHaveLength(new Set(getMemoryTarget("flash-grid", challenge)).size);
       expect(getSequenceTarget(challenge)).toHaveLength(new Set(getSequenceTarget(challenge)).size);
       expect(getSceneTargets(challenge).changed.every((cell) => !getSceneTargets(challenge).before.includes(cell))).toBe(true);
+      
+      // Test switchboard generator/validator alignment
+      const switchStart = getSwitchStart(challenge);
+      const switchSolution = getSwitchSolution(challenge);
+      // Apply the solution to the start state
+      const testLights = [...switchStart];
+      switchSolution.forEach(index => toggleSwitch(testLights, index));
+      expect(isValidSwitchboard(testLights)).toBe(true);
     });
     expect(isValidPath([0, 1, 2, 3, 7, 11, 15], [5, 6, 10])).toBe(true);
     expect(isValidPath([0, 1, 5, 9, 15], [5, 6, 10])).toBe(false);
