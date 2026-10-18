@@ -11,8 +11,8 @@ export type ScoreBreakdown = {
   total: number;
 };
 
-export function getScoreBreakdown(kind: GameKind, durationMs: number, moves: number, mistakes: number, hintsUsed: number, mode: "normal" | "hard" | "expert"): ScoreBreakdown {
-  const multiplier = mode === "expert" ? 1.35 : mode === "hard" ? 1.15 : 1;
+export function getScoreBreakdown(kind: GameKind, durationMs: number, moves: number, mistakes: number, hintsUsed: number, mode: "normal" | "medium" | "hard" | "expert"): ScoreBreakdown {
+  const multiplier = mode === "expert" ? 1.35 : mode === "hard" ? 1.15 : mode === "medium" ? 1.07 : 1;
   const base = Math.round(10000 * multiplier);
   const timePenalty = Math.floor(Math.max(0, durationMs) / 90);
   const movePenalty = Math.max(0, moves) * getGameMechanic(kind).moveWeight;

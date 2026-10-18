@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { games } from "@/data/games";
 import { getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getChoicePuzzle, isValidBinaryGrid, isValidColorArrangement, isValidMirrorSolution, isValidNetwork, isValidNumberGrid, isValidPath, isValidSwitchboard, matchesNonogramClues, nonogramTarget, revealSafeCells } from "@/lib/gameplay";
+import { validateMatrixPuzzle, validateOddPuzzle } from "@/lib/puzzle-engine";
 import { getDailyPuzzleId, getDailyStreak } from "@/lib/progress";
 import { getChallengeConfig } from "@/lib/difficulty";
 import { getMineClues, getMineTargets, getMemoryTarget, getSceneTargets, getSequenceTarget, getSwitchSolution, getSwitchStart, toggleSwitch } from "@/lib/challenge-data";
@@ -49,8 +50,8 @@ describe("Gridverse puzzle rules", () => {
     expect(isValidSwitchboard(Array(9).fill(true))).toBe(true);
     expect(isValidSwitchboard(Array(8).fill(true))).toBe(false);
     expect(isValidMirrorSolution([true, false], [true, false])).toBe(true);
-    expect(isValidColorArrangement([0, 1, 2, 3])).toBe(false);
-    expect(isValidNetwork([[0, 1], [0, 2], [1, 3], [2, 3], [0, 3], [1, 2]], [true, false, true, true, false, true])).toBe(true);
+    expect(isValidColorArrangement([0, 1, 2, 3])).toBe(true);
+    expect(isValidNetwork([[0, 1], [0, 2], [1, 3], [2, 3], [0, 3], [1, 2]], [true, false, false, true, true, true])).toBe(true);
   });
 
   it("expands zero-clue mine areas without revealing mines", () => {
@@ -63,10 +64,11 @@ describe("Gridverse puzzle rules", () => {
     const pattern = getPatternShiftPuzzle(2);
     expect(pattern.target).toEqual([0, 5, 10, 15]);
     const odd = getOddOneOutPuzzle(2);
-    expect(odd.items.filter((item) => item.fill === "outline")).toHaveLength(1);
-    expect(getMatrixMysteryPuzzle(2).options[getMatrixMysteryPuzzle(2).answer]).toBe("5");
+    expect(validateOddPuzzle(odd)).toBe(true);
+    expect(validateMatrixPuzzle(getMatrixMysteryPuzzle(2))).toBe(true);
     expect(getSequenceDetectivePuzzle(3).options[getSequenceDetectivePuzzle(3).answer]).toBe("◆◆◆");
-    expect(getDailyMysteryPuzzle(new Date("2026-01-03T12:00:00Z")).answer).toEqual([3, 2, 1, 0]);
+    const daily = getDailyMysteryPuzzle(new Date("2026-01-03T12:00:00Z"));
+    expect(daily.answer.map(index => daily.items[index].split(" · ")[1])).toEqual(["08:00", "08:30", "09:00", "09:30"]);
   });
 
   it("keeps the daily puzzle stable for a date and changes the identifier next day", () => {

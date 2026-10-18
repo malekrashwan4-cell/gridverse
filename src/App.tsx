@@ -13,6 +13,7 @@ import {
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 import AuthCallback from "./pages/AuthCallback";
+import { AudioExperience } from "./components/AudioControls";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AudioExperience />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/games" element={<GamesPage />} />

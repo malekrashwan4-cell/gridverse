@@ -1,12 +1,16 @@
-import { useEffect, useState } from "react";
-import { Check, ChevronLeft, Flag, Lightbulb, Lock, RotateCw, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronLeft, Flag, Lightbulb, Lock, RotateCw } from "lucide-react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { Game, GameKind } from "@/data/games";
 import type { ChallengeConfig } from "@/lib/difficulty";
-import { getGivenIndices, getMemoryTarget, getMineClues, getMineTargets, getMirrorTarget, getPathObstacles, getSceneTargets, getSequenceTarget, getSwitchStart, toggleSwitch } from "@/lib/challenge-data";
-import { getChoicePuzzle, getDailyMysteryPuzzle, getGridPuzzle, getMatrixMysteryPuzzle, getNonogramClues, getOddOneOutPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getSymbolLayout, isAdjacent, isValidBinaryGrid, isValidColorArrangement, isValidMirrorSolution, isValidNetwork, isValidNonogramSolution, isValidNumberGrid, isValidPath, isValidSwitchboard, matchesNonogramClues, nonogramTarget, revealSafeCells, symbols } from "@/lib/gameplay";
+import { getGivenIndices, getMemoryTarget, getMineClues, getMineTargets, getMirrorTarget, getPathObstacles, getPathWaypoints, getSceneTargets, getSequenceTarget, getSwitchStart, toggleSwitch } from "@/lib/challenge-data";
+import { getChoicePuzzle, getDailyMysteryPuzzle, getGridPuzzle, getPatternShiftPuzzle, getSequenceDetectivePuzzle, getSymbolLayout, isAdjacent, isValidBinaryGrid, isValidColorArrangement, isValidMirrorSolution, isValidNetwork, isValidNumberGrid, isValidPath, isValidSwitchboard, revealSafeCells, symbols } from "@/lib/gameplay";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { NonogramBoard } from "@/components/NonogramBoard";
+import { ReasoningPuzzleBoard } from "@/components/ReasoningPuzzleBoard";
+import { ChangeDetectorBoard } from "@/components/ChangeDetectorBoard";
+import { createPicture } from "@/lib/puzzle-engine";
 
 export type PuzzleState = {
   cells: Array<number | boolean | null>;
@@ -22,7 +26,7 @@ export type PuzzleState = {
   mineMode: "reveal" | "flag";
 };
 
-type GameBoardProps = {
+export type GameBoardProps = {
   game: Game;
   state: PuzzleState;
   setState: Dispatch<SetStateAction<PuzzleState>>;
@@ -46,7 +50,7 @@ function ChoiceButton({ active, onClick, children, wrong, choiceIndex }: { activ
 }
 
 function GridCell({ active, disabled, onClick, label, children, className }: { active?: boolean; disabled?: boolean; onClick?: React.MouseEventHandler<HTMLButtonElement>; label: string; children?: ReactNode; className?: string }) {
-  return <button type="button" disabled={disabled} aria-label={label} onClick={onClick} className={cn("aspect-square w-full touch-manipulation rounded-xl border text-sm font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", active ? "border-primary bg-primary text-primary-foreground shadow-[0_8px_18px_hsl(var(--primary)/.18)]" : "border-border/70 bg-card hover:border-primary/55 hover:bg-primary/[.04]", disabled && "cursor-not-allowed border-border/50 bg-muted/70 text-muted-foreground/60 hover:border-border/50 hover:bg-muted/70", className)}>{children}</button>;
+  return <button type="button" disabled={disabled} aria-label={label} onClick={onClick} className={cn("gv-cell aspect-square w-full touch-manipulation rounded-xl border text-sm font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", active ? "border-primary bg-primary text-primary-foreground shadow-[0_8px_18px_hsl(var(--primary)/.18)]" : "border-border/70 bg-card hover:border-primary/55 hover:bg-primary/[.04]", disabled && "cursor-not-allowed border-border/50 bg-muted/70 text-muted-foreground/60 hover:border-border/50 hover:bg-muted/70", className)}>{children}</button>;
 }
 
 function ChoiceBoard({ game, state, setState, challenge, onComplete, onMistake, onMove }: GameBoardProps) {
@@ -95,86 +99,11 @@ function LogicBoard({ game, state, setState, challenge, onComplete, onMistake, o
     const complete = (cells: Array<number | boolean | null>) => binary ? isValidBinaryGrid(cells) : isValidNumberGrid(cells);
     return <div className="w-full max-w-[430px]"><Rule text={binary ? "Complete the binary grid: every row and column has two of each value, with no triples or duplicate lines." : "Fill every row and column with 1–4 exactly once. Any valid Latin grid is accepted."} hint={hintUsed ? "Use locked clues as anchors and eliminate candidates from each line." : binary ? "Tap to cycle 0 → 1 → blank." : "Tap to cycle 1 → 2 → 3 → 4 → blank."} /><CellGrid>{(i) => { const given = givens.includes(i); return <GridCell label={`${binary ? "Binary" : "Number"} cell ${i + 1}`} disabled={given} onClick={() => { const cells = [...state.cells]; cells[i] = binary ? cells[i] === null ? 0 : cells[i] === 0 ? 1 : null : cells[i] === null ? 1 : Number(cells[i]) === 4 ? null : Number(cells[i]) + 1; onMove(); setState((current) => ({ ...current, cells })); if (cells.every((cell) => cell !== null)) { if (complete(cells)) onComplete(); else onMistake(); } }} className="font-display text-xl">{state.cells[i] ?? <span className="text-muted-foreground/30">·</span>}</GridCell>; }}</CellGrid><p className="mt-4 text-center text-[11px] font-semibold text-muted-foreground">{givens.length} generated clues · stage {challenge.stage}/3</p></div>;
   }
-  if (kind === "nonogram") {
-      const clues = getNonogramClues(nonogramTarget);
-      const target = nonogramTarget;
-      const [pendingCell, setPendingCell] = useState<number | null>(null);
-      const [tapTimer, setTapTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-      const TAP_INTERVAL = 350;
-  
-      const clearPending = () => {
-        if (tapTimer) {
-          clearTimeout(tapTimer);
-          setTapTimer(null);
-        }
-        setPendingCell(null);
-      };
-  
-      const handleTap = (i: number, e?: React.MouseEvent | React.TouchEvent) => {
-        e?.preventDefault();
-        e?.stopPropagation();
-        onMove();
-  
-        // If tapping a different cell, cancel previous pending
-        if (pendingCell !== null && pendingCell !== i) {
-          clearPending();
-        }
-  
-        const currentValue = state.cells[i];
-  
-        if (pendingCell === i) {
-          // Second tap on same cell within interval
-          clearPending();
-          if (currentValue === true) {
-            // Filled → eliminate
-            setState((current) => {
-              const cells = [...current.cells];
-              cells[i] = false;
-              if (isValidNonogramSolution(cells, target)) onComplete();
-              return { ...current, cells };
-            });
-          } else {
-            // Unknown or eliminated → fill
-            setState((current) => {
-              const cells = [...current.cells];
-              cells[i] = true;
-              if (isValidNonogramSolution(cells, target)) onComplete();
-              return { ...current, cells };
-            });
-          }
-          return;
-        }
-  
-        // First tap: arm the cell
-        setPendingCell(i);
-        const timer = setTimeout(() => {
-          // Timeout: single tap = eliminate
-          setPendingCell(null);
-          setTapTimer(null);
-          setState((current) => {
-            const cells = [...current.cells];
-            if (currentValue !== false) {
-              cells[i] = false;
-            }
-            return { ...current, cells };
-          });
-        }, TAP_INTERVAL);
-        setTapTimer(timer);
-      };
-  
-      // Tap elsewhere on board cancels pending selection
-      const handleBoardTap = () => {
-        if (pendingCell !== null) {
-          clearPending();
-        }
-      };
-  
-      return <div className="w-full max-w-[430px]" onClick={handleBoardTap}><Rule text="Reveal the pixel picture from the actual row and column clues." hint={hintUsed ? "Clues describe runs of adjacent filled cells, not total cells in a row." : "Single tap eliminates a cell. Double-tap the same cell within 350ms to fill it."} /><div className="mb-4 grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-muted-foreground">{clues.columns.map((clue, index) => <span key={index}>{clue.join(" ")}</span>)}</div><CellGrid>{(i) => <GridCell label={`Nonogram cell ${i + 1}`} onClick={(e) => handleTap(i, e)} className={state.cells[i] === false ? "border-dashed bg-muted/30" : state.cells[i] === true ? "border-primary bg-primary" : pendingCell === i ? "border-amber-400 bg-amber-400/20" : "bg-card"}>{state.cells[i] === false ? <X className="mx-auto h-4 w-4 text-muted-foreground/60" /> : state.cells[i] === null ? <span className="text-muted-foreground/25">·</span> : null}</GridCell>}</CellGrid><div className="mt-4 flex justify-between text-[10px] font-bold text-muted-foreground"><span>Rows: {clues.rows.map((clue) => clue.join(" ")).join(" · ")}</span><span>Columns describe runs</span></div></div>;
-    }
   if (kind === "pathfinder") {
     const obstacles = getPathObstacles(challenge);
+    const waypoints = getPathWaypoints(challenge);
     const end = 15;
-    return <div className="w-full max-w-[430px]"><Rule text="Reach END through adjacent open cells without crossing an obstacle or revisiting a cell. Any legal route is accepted." hint={hintUsed ? "The endpoint is fixed at the lower-right cell. Undo only removes the last step." : "A shorter route earns a better score, but the objective is reaching the endpoint legally."} /><CellGrid>{(i) => { const blocked = obstacles.includes(i); const inPath = state.path.includes(i); return <GridCell label={`Path cell ${i + 1}`} disabled={blocked || inPath || state.path[state.path.length - 1] === end} active={inPath} onClick={() => { const previous = state.path[state.path.length - 1]; if (inPath || blocked || previous === end) return; if (!isAdjacent(previous, i)) { onMove(); onMistake(); return; } const path = [...state.path, i]; onMove(); setState((current) => ({ ...current, path })); if (isValidPath(path, obstacles, end)) onComplete(); }} className={cn(i === 0 && "border-emerald-500 bg-emerald-500/10 text-emerald-600", i === end && "border-rose-500 bg-rose-500/10 text-rose-600", blocked && "bg-muted")}>{i === 0 ? "START" : i === end ? "END" : blocked ? <Lock className="mx-auto h-4 w-4" /> : inPath ? state.path.indexOf(i) + 1 : ""}</GridCell>; }}</CellGrid><Button type="button" variant="outline" disabled={state.path.length <= 1} onClick={() => { onMove(); setState((current) => ({ ...current, path: current.path.slice(0, -1) })); }} className="mt-5 h-9 rounded-xl text-xs font-bold"><ChevronLeft className="mr-1 h-3.5 w-3.5" /> Undo step</Button></div>;
+    return <div className="w-full max-w-[430px]"><Rule text={`Reach END through adjacent open cells without revisiting. Visit all ${waypoints.length} marked checkpoints first.`} hint={hintUsed ? "The endpoint is fixed at the lower-right cell. Undo only removes the last step." : "A shorter route earns a better score, but the objective is reaching the endpoint legally."} /><CellGrid>{(i) => { const blocked = obstacles.includes(i); const inPath = state.path.includes(i); return <GridCell label={`Path cell ${i + 1}`} disabled={blocked || inPath || state.path[state.path.length - 1] === end} active={inPath} onClick={() => { const previous = state.path[state.path.length - 1]; if (inPath || blocked || previous === end) return; if (!isAdjacent(previous, i)) { onMove(); onMistake(); return; } if (i === end && !waypoints.every(point => state.path.includes(point))) { onMove(); onMistake(); return; } const path = [...state.path, i]; onMove(); setState((current) => ({ ...current, path })); if (isValidPath(path, obstacles, end)) onComplete(); }} className={cn(i === 0 && "border-emerald-500 bg-emerald-500/10 text-emerald-600", i === end && "border-rose-500 bg-rose-500/10 text-rose-600", blocked && "bg-muted")}>{i === 0 ? "START" : i === end ? "END" : blocked ? <Lock className="mx-auto h-4 w-4" /> : inPath ? state.path.indexOf(i) + 1 : waypoints.includes(i) ? "◎" : ""}</GridCell>; }}</CellGrid><Button type="button" variant="outline" disabled={state.path.length <= 1} onClick={() => { onMove(); setState((current) => ({ ...current, path: current.path.slice(0, -1) })); }} className="mt-5 h-9 rounded-xl text-xs font-bold"><ChevronLeft className="mr-1 h-3.5 w-3.5" /> Undo step</Button></div>;
   }
   if (kind === "switchboard") return <div className="w-full max-w-[430px]"><Rule text="Turn every light on. Each switch toggles itself and its orthogonal neighbors." hint={hintUsed ? "Find pairs of switches that cancel each other, then finish with efficient moves." : `Generated solvable layout · stage ${challenge.stage}`} /><div className="mx-auto grid max-w-[310px] grid-cols-3 gap-2">{state.lights.map((isOn, i) => <GridCell key={i} label={`Switch ${i + 1}`} active={isOn} onClick={() => { const lights = [...state.lights]; toggleSwitch(lights, i); onMove(); setState((current) => ({ ...current, lights })); if (isValidSwitchboard(lights)) onComplete(); }} className={cn("aspect-square", isOn ? "border-amber-400 bg-amber-300/80 text-amber-950 shadow-[0_0_24px_rgb(251_191_36_/_0.3)]" : "bg-card")}><Lightbulb className="mx-auto h-5 w-5" /></GridCell>)}</div></div>;
   return <ChoiceBoard {...{ game, state, setState, challenge, onComplete, onMistake, onMove } as GameBoardProps} />;
@@ -201,26 +130,18 @@ function PatternFrame({ cells, interactive, onToggle }: { cells: number[]; inter
 
 function ReasoningBoard({ game, state, setState, challenge, onComplete, onMistake, onMove, hintUsed }: GameBoardProps) {
   if (game.kind === "pattern-shift") {
-    const puzzle = getPatternShiftPuzzle(challenge.stage);
+    const puzzle = getPatternShiftPuzzle(challenge.seed, challenge.level);
     const selected = state.cells.flatMap((cell, index) => cell === true ? [index] : []);
     return <div className="w-full max-w-[560px] text-center"><Rule text="Construct the next frame in the visual sequence." hint={hintUsed ? puzzle.rule : "Study the first three frames, then fill the fourth frame and check it."} /><div className="mb-5 grid grid-cols-3 gap-2">{puzzle.frames.map((frame, index) => <div key={index}><p className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground">Frame {index + 1}</p><PatternFrame cells={frame} /></div>)}</div><div className="mb-5"><p className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-primary">Your next frame</p><PatternFrame cells={selected} interactive onToggle={(index) => { const cells = [...state.cells]; cells[index] = cells[index] === true ? false : true; onMove(); setState((current) => ({ ...current, cells })); }} /></div><Button type="button" onClick={() => { onMove(); if (selected.length === puzzle.target.length && selected.every((index) => puzzle.target.includes(index))) onComplete(); else onMistake(); }} className="rounded-xl font-bold">Check frame</Button></div>;
-  }
-  if (game.kind === "odd-one-out") {
-    const puzzle = getOddOneOutPuzzle(challenge.stage);
-    return <div className="w-full max-w-[520px] text-center"><Rule text="Identify the only tile that violates the visual rule." hint={hintUsed ? puzzle.rule : "Compare shape, fill, and rotation across all four tiles."} /><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{puzzle.items.map((item, index) => <button type="button" key={index} aria-label={`Odd one out tile ${index + 1}`} onClick={() => { onMove(); setState((current) => ({ ...current, answer: index })); if (index === puzzle.oddIndex) onComplete(); else onMistake(); }} className={cn("grid aspect-square place-items-center rounded-2xl border bg-card text-5xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", state.answer === index && "border-primary bg-primary/10")}><span style={{ transform: `rotate(${item.rotation}deg)`, opacity: item.fill === "outline" ? 0.45 : 1 }}>{item.shape}</span><small className="self-end pb-2 text-[10px] font-bold text-muted-foreground">Tile {index + 1}</small></button>)}</div></div>;
-  }
-  if (game.kind === "matrix-mystery") {
-    const puzzle = getMatrixMysteryPuzzle(challenge.stage);
-    return <div className="w-full max-w-[500px] text-center"><Rule text="Complete the 3×3 relationship matrix." hint={hintUsed ? puzzle.rule : "Look for the transformation shared by each row and column."} /><div className="mb-5 grid grid-cols-3 gap-2">{puzzle.cells.map((cell, index) => <span key={index} className={cn("grid aspect-square place-items-center rounded-xl border bg-card font-display text-2xl font-extrabold", cell === "?" && "border-dashed border-primary text-primary")}>{cell}</span>)}</div><div className="grid grid-cols-2 gap-2">{puzzle.options.map((option, index) => <ChoiceButton key={option} active={state.answer === index} onClick={() => { onMove(); setState((current) => ({ ...current, answer: index })); if (index === puzzle.answer) onComplete(); else onMistake(); }}>{option}</ChoiceButton>)}</div></div>;
   }
   if (game.kind === "sequence-detective") {
     const puzzle = getSequenceDetectivePuzzle(challenge.stage);
     return <div className="w-full max-w-[520px] text-center"><Rule text="Infer the next item in the changing sequence." hint={hintUsed ? puzzle.rule : "Track both the symbol and its position in the sequence."} /><div className="mb-5 flex items-center justify-center gap-2 text-3xl font-display font-extrabold">{puzzle.sequence.map((item, index) => <span key={index} className={cn("grid h-16 min-w-16 place-items-center rounded-xl border bg-card", item === "?" && "border-dashed border-primary text-primary")}>{item}</span>)}</div><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{puzzle.options.map((option, index) => <ChoiceButton key={option} active={state.answer === index} onClick={() => { onMove(); setState((current) => ({ ...current, answer: index })); if (index === puzzle.answer) onComplete(); else onMistake(); }}>{option}</ChoiceButton>)}</div></div>;
   }
-  const puzzle = getDailyMysteryPuzzle();
-  const order = state.cells.slice(0, 4).map((cell, index) => typeof cell === "number" ? cell : index);
+  const puzzle = getDailyMysteryPuzzle(new Date(), challenge.level);
+  const order = state.cells.slice(0, puzzle.items.length).map((cell, index) => typeof cell === "number" ? cell : index);
   const selected = state.selected[0];
-  return <div className="w-full max-w-[560px] text-center"><Rule text="Reconstruct the witness timeline for today's mystery." hint={hintUsed ? puzzle.rule : "Select two stops to swap them. The same daily order is used all day."} /><div className="grid gap-3">{order.map((itemIndex, position) => <button type="button" key={`${itemIndex}-${position}`} onClick={() => { if (selected === undefined) { setState((current) => ({ ...current, selected: [position] })); return; } if (selected === position) { setState((current) => ({ ...current, selected: [] })); return; } const next = [...order]; [next[selected], next[position]] = [next[position], next[selected]]; onMove(); setState((current) => ({ ...current, cells: next, selected: [] })); if (next.every((value, index) => value === puzzle.answer[index])) onComplete(); }} className={cn("flex items-center justify-between rounded-2xl border bg-card px-4 py-4 text-left font-bold transition hover:border-primary/50", selected === position && "border-primary bg-primary/10")}><span className="mr-3 grid h-7 w-7 place-items-center rounded-lg bg-muted text-xs text-muted-foreground">{position + 1}</span><span className="flex-1">{puzzle.items[itemIndex]}</span><span className="text-xs text-muted-foreground">Select to swap</span></button>)}</div></div>;
+  return <div className="w-full max-w-[560px] text-center"><Rule text="Reconstruct the witness timeline for today's mystery." hint={hintUsed ? puzzle.rule : `${puzzle.rule} Select two stops to swap them. Everyone at this tier receives the same daily puzzle.`} /><div className="grid gap-3">{order.map((itemIndex, position) => <button type="button" key={`${itemIndex}-${position}`} onClick={() => { if (selected === undefined) { setState((current) => ({ ...current, selected: [position] })); return; } if (selected === position) { setState((current) => ({ ...current, selected: [] })); return; } const next = [...order]; [next[selected], next[position]] = [next[position], next[selected]]; onMove(); setState((current) => ({ ...current, cells: next, selected: [] })); if (next.every((value, index) => value === puzzle.answer[index])) onComplete(); }} className={cn("flex items-center justify-between rounded-2xl border bg-card px-4 py-4 text-left font-bold transition hover:border-primary/50", selected === position && "border-primary bg-primary/10")}><span className="mr-3 grid h-7 w-7 place-items-center rounded-lg bg-muted text-xs text-muted-foreground">{position + 1}</span><span className="flex-1">{puzzle.items[itemIndex]}</span><span className="text-xs text-muted-foreground">Select to swap</span></button>)}</div></div>;
 }
 
 function SpatialBoard({ game, state, setState, challenge, onComplete, onMistake, onMove, hintUsed }: GameBoardProps) {
@@ -275,11 +196,18 @@ function MemoryBoard({ game, state, setState, challenge, onComplete, onMistake, 
     window.addEventListener("gridverse-resume", resume);
     return () => { window.removeEventListener("gridverse-pause", pause); window.removeEventListener("gridverse-resume", resume); };
   }, []);
+  const studyRemaining = useRef(challenge.studyDurationMs);
   useEffect(() => {
     if (!state.show || paused) return;
-    const timer = window.setTimeout(() => setState((current) => ({ ...current, show: false })), challenge.studyDurationMs);
-    return () => window.clearTimeout(timer);
-  }, [challenge.studyDurationMs, paused, setState, state.show]);
+    let last = performance.now();
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      if (!document.hidden) studyRemaining.current = Math.max(0, studyRemaining.current - (now - last));
+      last = now;
+      if (studyRemaining.current === 0) setState(current => ({ ...current, show: false }));
+    }, 80);
+    return () => window.clearInterval(timer);
+  }, [paused, setState, state.show]);
   if (kind === "symbol-recall") {
     const layout = getSymbolLayout(challenge.tier);
     const correct = Object.entries(layout).every(([index, symbol]) => state.cells[Number(index)] === symbol) && Object.keys(layout).length === state.cells.filter((cell) => cell !== null).length;
@@ -301,20 +229,23 @@ function isChoiceKind(kind: GameKind) {
 }
 
 export function GameBoard(props: GameBoardProps) {
-  if (["number-grid", "mine-logic", "nonogram", "binary-grid", "pathfinder", "switchboard"].includes(props.game.kind)) return <LogicBoard {...props} />;
-  if (["pattern-shift", "odd-one-out", "matrix-mystery", "sequence-detective", "daily-mystery"].includes(props.game.kind)) return <ReasoningBoard {...props} />;
+  if (props.game.kind === "nonogram") return <NonogramBoard {...props} />;
+  if (props.game.kind === "odd-one-out" || props.game.kind === "matrix-mystery") return <ReasoningPuzzleBoard {...props} />;
+  if (props.game.kind === "change-detector") return <ChangeDetectorBoard {...props} />;
+  if (["number-grid", "mine-logic", "binary-grid", "pathfinder", "switchboard"].includes(props.game.kind)) return <LogicBoard {...props} />;
+  if (["pattern-shift", "sequence-detective", "daily-mystery"].includes(props.game.kind)) return <ReasoningBoard {...props} />;
   if (["mirror-world", "shape-packing", "rotation-puzzle", "cube-explorer", "shadow-match", "color-logic", "region-rules", "perfect-placement", "mystery-network", "one-move", "constraint-master", "rule-breaker"].includes(props.game.kind)) return <SpatialBoard {...props} />;
   if (isChoiceKind(props.game.kind)) return <ChoiceBoard {...props} />;
   return <MemoryBoard {...props} />;
 }
 
 export function createInitialPuzzleState(kind: GameKind, challenge: ChallengeConfig): PuzzleState {
-  const cells: Array<number | boolean | null> = Array(16).fill(null);
+  const cells: Array<number | boolean | null> = Array(kind === "nonogram" ? createPicture(challenge.level, challenge.seed).size ** 2 : 16).fill(null);
   if (kind === "number-grid" || kind === "binary-grid") {
-    const puzzle = getGridPuzzle(kind, challenge.tier, challenge.stage);
+    const puzzle = getGridPuzzle(kind, challenge.level, challenge.seed);
     puzzle.givens.forEach((index) => { cells[index] = puzzle.target[index]; });
   }
   const lights = kind === "switchboard" ? getSwitchStart(challenge) : Array(9).fill(false) as boolean[];
-  if (kind === "daily-mystery") cells.splice(0, 4, 0, 1, 2, 3);
+  if (kind === "daily-mystery") { const count = getDailyMysteryPuzzle(new Date(), challenge.level).items.length; cells.splice(0, count, ...Array.from({ length: count }, (_, i) => i)); }
   return { cells, selected: [], path: [0], lights, input: [], show: ["flash-grid", "symbol-recall", "sequence-memory", "hidden-pattern"].includes(kind), answer: null, choiceStreak: 0, flags: [], revealed: kind === "mine-logic" ? [0] : [], mineMode: "reveal" };
 }

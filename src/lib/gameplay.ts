@@ -1,4 +1,5 @@
 import type { GameKind } from "@/data/games";
+import { createMatrixPuzzle, createOddPuzzle, createTimeline } from "@/lib/puzzle-engine";
 
 export type ChoiceDisplay = "sequence" | "tiles" | "matrix" | "palette" | "network" | "board" | "spatial";
 
@@ -67,7 +68,7 @@ export function seededRandom(seed: number) {
 
 export type GridPuzzle = { target: number[]; givens: number[] };
 
-export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 | 3, stage = 1): GridPuzzle {
+export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 | 3 | 4, stage = 1): GridPuzzle {
   const random = seededRandom((kind === "number-grid" ? 41 : 97) + tier * 17 + stage * 31);
   if (kind === "binary-grid") {
     const rows = [
@@ -79,7 +80,7 @@ export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 |
     const rowOrder = [0, 1, 2, 3].sort(() => random() - 0.5);
     const columnOrder = [0, 1, 2, 3].sort(() => random() - 0.5);
     const target = rowOrder.flatMap((row) => columnOrder.map((column) => rows[row][column]));
-    const clueCount = tier === 1 ? 9 : tier === 2 ? 7 : 5;
+    const clueCount = [10, 8, 6, 4][tier - 1];
     const givens = Array.from({ length: 16 }, (_, index) => index).sort(() => random() - 0.5).slice(0, clueCount).sort((a, b) => a - b);
     return { target, givens };
   }
@@ -92,7 +93,7 @@ export function getGridPuzzle(kind: "number-grid" | "binary-grid", tier: 1 | 2 |
   ];
   const symbolsOrder = [1, 2, 3, 4].sort(() => random() - 0.5);
   const target = Array.from({ length: 4 }, (_, row) => Array.from({ length: 4 }, (_, column) => symbolsOrder[base[(row + stage) % 4][column] - 1])).flat();
-  const clueCount = tier === 1 ? 10 : tier === 2 ? 8 : 6;
+  const clueCount = [10, 8, 6, 4][tier - 1];
   const givens = Array.from({ length: 16 }, (_, index) => index).sort(() => random() - 0.5).slice(0, clueCount).sort((a, b) => a - b);
   return { target, givens };
 }
@@ -109,10 +110,10 @@ export function isValidNumberGrid(cells: Array<number | boolean | null>) {
 
 export function isValidBinaryGrid(cells: Array<number | boolean | null>) {
   if (cells.length !== 16 || cells.some((cell) => cell !== 0 && cell !== 1)) return false;
-  const lines: number[][] = [];
-  for (let line = 0; line < 4; line += 1) lines.push(cells.slice(line * 4, line * 4 + 4) as number[], [cells[line], cells[line + 4], cells[line + 8], cells[line + 12]] as number[]);
-  if (lines.some((line) => line.filter(Boolean).length !== 2 || line.some((value, index) => index < 2 && value === line[index + 1] && value === line[index + 2]))) return false;
-  return new Set(lines.slice(0, 4).map((line) => line.join(""))).size === 4 && new Set(lines.slice(4).map((line) => line.join(""))).size === 4;
+  const rows = Array.from({ length: 4 }, (_, row) => cells.slice(row * 4, row * 4 + 4) as number[]);
+  const columns = Array.from({ length: 4 }, (_, column) => [cells[column], cells[column + 4], cells[column + 8], cells[column + 12]] as number[]);
+  if ([...rows, ...columns].some(line => line.filter(Boolean).length !== 2 || line.some((value, index) => index < 2 && value === line[index + 1] && value === line[index + 2]))) return false;
+  return new Set(rows.map(line => line.join(""))).size === 4 && new Set(columns.map(line => line.join(""))).size === 4;
 }
 
 export function isValidPath(path: number[], obstacles: number[], end = 15) {
@@ -150,20 +151,20 @@ export function getLineClues(values: boolean[]) {
 }
 
 export function getNonogramClues(target: boolean[]) {
-  const rows = Array.from({ length: 4 }, (_, row) => getLineClues(target.slice(row * 4, row * 4 + 4)));
-  const columns = Array.from({ length: 4 }, (_, column) => getLineClues([target[column], target[column + 4], target[column + 8], target[column + 12]]));
+  const size = Math.sqrt(target.length);
+  const rows = Array.from({ length: size }, (_, row) => getLineClues(target.slice(row * size, (row + 1) * size)));
+  const columns = Array.from({ length: size }, (_, column) => getLineClues(Array.from({ length: size }, (_, row) => target[row * size + column])));
   return { rows, columns };
 }
 
 export function matchesNonogramClues(cells: Array<number | boolean | null>, clues: ReturnType<typeof getNonogramClues>) {
-  if (cells.length !== 16 || cells.some((cell) => cell === null)) return false;
-  const filled = cells.map(Boolean);
-  return clues.rows.every((clue, row) => JSON.stringify(clue) === JSON.stringify(getLineClues(filled.slice(row * 4, row * 4 + 4)))) && clues.columns.every((clue, column) => JSON.stringify(clue) === JSON.stringify(getLineClues([filled[column], filled[column + 4], filled[column + 8], filled[column + 12]])));
+  if (cells.length !== clues.rows.length ** 2 || cells.some((cell) => typeof cell !== "boolean")) return false;
+  const actual = getNonogramClues(cells as boolean[]);
+  return JSON.stringify(actual) === JSON.stringify(clues);
 }
 
 export function isValidNonogramSolution(cells: Array<number | boolean | null>, target: boolean[]) {
-  if (cells.length !== target.length || cells.some((cell) => cell === null)) return false;
-  return cells.every((cell, index) => Boolean(cell) === target[index]);
+  return cells.length === target.length && cells.every((cell, index) => typeof cell === "boolean" && cell === target[index]);
 }
 
 export function revealSafeCells(start: number, clues: number[], mines: number[], revealed: number[], flags: number[]) {
@@ -228,7 +229,17 @@ export type MatrixMysteryPuzzle = { cells: string[]; options: string[]; answer: 
 export type SequenceDetectivePuzzle = { sequence: string[]; options: string[]; answer: number; rule: string };
 export type DailyMysteryPuzzle = { id: string; items: string[]; answer: number[]; rule: string };
 
-export function getPatternShiftPuzzle(stage = 1): PatternShiftPuzzle {
+export function getPatternShiftPuzzle(stage = 1, level = 1): PatternShiftPuzzle {
+  if (level > 1) {
+    const transform = (cells: number[], frame: number) => cells.map(cell => {
+      let row = Math.floor(cell / 4), column = cell % 4;
+      if (level >= 3) for (let turn = 0; turn < frame % 4; turn++) [row, column] = [column, 3 - row];
+      if (level === 4 && frame % 2 === 1) column = 3 - column;
+      return row * 4 + column;
+    });
+    const frame = (index: number) => transform(Array.from({ length: (index + 1) * 2 }, (_, i) => (i + stage) % 16), index);
+    return { frames: [frame(0), frame(1), frame(2)], target: frame(3), rule: `Add two consecutive cells to the untransformed pattern each frame${level >= 3 ? ', then rotate it one more quarter-turn clockwise' : ''}${level === 4 ? '; odd-numbered transformations (frames 2 and 4) also reflect horizontally after rotation' : ''}.` };
+  }
   const patterns = [
     { frames: [[0], [0, 1], [0, 1, 2]], target: [0, 1, 2, 3], rule: "One adjacent cell is added from left to right." },
     { frames: [[0], [0, 5], [0, 5, 10]], target: [0, 5, 10, 15], rule: "The diagonal grows by one step on every frame." },
@@ -237,22 +248,12 @@ export function getPatternShiftPuzzle(stage = 1): PatternShiftPuzzle {
   return patterns[(stage - 1) % patterns.length];
 }
 
-export function getOddOneOutPuzzle(stage = 1): OddOneOutPuzzle {
-  const oddIndex = (stage - 1) % 4;
-  const items = Array.from({ length: 4 }, (_, index) => ({ shape: "◆", fill: "solid", rotation: 0 }));
-  if (stage % 3 === 1) items[oddIndex].rotation = 90;
-  if (stage % 3 === 2) items[oddIndex].fill = "outline";
-  if (stage % 3 === 0) items[oddIndex].shape = "●";
-  return { items, oddIndex, rule: stage % 3 === 1 ? "Three symbols share the same orientation." : stage % 3 === 2 ? "Three symbols share the same fill." : "Three symbols share the same shape." };
+export function getOddOneOutPuzzle(seed = 1, level = 1) {
+  return createOddPuzzle(level, seed);
 }
 
-export function getMatrixMysteryPuzzle(stage = 1): MatrixMysteryPuzzle {
-  const puzzles = [
-    { cells: ["◆", "●", "◆", "●", "▲", "●", "◆", "▲", "?"], options: ["●", "◆", "▲", "■"], answer: 0, rule: "Each column repeats its top symbol in the bottom row." },
-    { cells: ["1", "2", "3", "2", "3", "4", "3", "4", "?"], options: ["4", "5", "6", "7"], answer: 1, rule: "Every row and column increases by one." },
-    { cells: ["◆", "◆◆", "◆◆◆", "●", "●●", "●●●", "▲", "▲▲", "?"], options: ["▲", "▲▲", "▲▲▲", "▲▲▲▲"], answer: 2, rule: "The third cell in each row combines the first two." },
-  ];
-  return puzzles[(stage - 1) % puzzles.length];
+export function getMatrixMysteryPuzzle(seed = 1, level = 1) {
+  return createMatrixPuzzle(level, seed);
 }
 
 export function getSequenceDetectivePuzzle(stage = 1): SequenceDetectivePuzzle {
@@ -264,10 +265,9 @@ export function getSequenceDetectivePuzzle(stage = 1): SequenceDetectivePuzzle {
   return puzzles[(stage - 1) % puzzles.length];
 }
 
-export function getDailyMysteryPuzzle(date = new Date()): DailyMysteryPuzzle {
+export function getDailyMysteryPuzzle(date = new Date(), level = 1): DailyMysteryPuzzle {
   const seed = date.getUTCFullYear() * 372 + date.getUTCMonth() * 31 + date.getUTCDate();
-  const orders = [[0, 1, 2, 3], [2, 0, 3, 1], [1, 3, 0, 2], [3, 2, 1, 0]];
-  return { id: `daily-${date.toISOString().slice(0, 10)}`, items: ["Gallery · 08:10", "Cafe · 08:25", "Observatory · 08:40", "Archive · 08:55"], answer: orders[seed % orders.length], rule: "Place the witness stops in chronological order without overlapping times." };
+  return { id: `daily-${date.toISOString().slice(0, 10)}`, ...createTimeline(level, seed) };
 }
 
 export const choicePuzzles = baseChoicePuzzles;

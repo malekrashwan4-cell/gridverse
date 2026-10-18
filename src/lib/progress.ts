@@ -6,14 +6,14 @@ export type StoredResult = {
   mistakes: number;
   hintsUsed: number;
   completedAt: string;
-  difficulty?: "normal" | "hard" | "expert";
+  difficulty?: "normal" | "medium" | "hard" | "expert";
   stage?: number;
   scoreVersion?: 2;
 };
 
 export type ChallengeMetric = {
   gameId: string;
-  difficulty: "normal" | "hard" | "expert";
+  difficulty: "normal" | "medium" | "hard" | "expert";
   stage: number;
   completed: boolean;
   durationMs: number;

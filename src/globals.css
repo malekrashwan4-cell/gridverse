@@ -79,6 +79,24 @@
   .tabular-nums { font-variant-numeric: tabular-nums; }
 }
 
+@layer utilities {
+  .gv-enter { animation: gv-enter 220ms cubic-bezier(.2,.7,.2,1) both; }
+  .gv-cell { transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease; }
+  .gv-cell:active { transform: scale(.96); }
+  .gv-pending { animation: gv-glow 1.6s ease-in-out infinite; }
+  .gv-shake { animation: gv-shake 180ms ease-out; }
+}
+@keyframes gv-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes gv-pop { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes gv-glow { 50% { box-shadow: 0 0 0 3px hsl(var(--primary) / .12); } }
+@keyframes gv-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+[data-game-status="ready"] > div:last-child, [data-game-status="complete"] > div:last-child, [data-game-status="failed"] > div:last-child { animation: gv-enter 220ms ease-out; }
+[data-game-status="complete"] > div:last-child > span:first-child { animation: gv-pop 320ms cubic-bezier(.2,.7,.2,1); }
+[data-game-status="complete"] .font-display { animation: gv-enter 260ms ease-out both; }
+button:not(:disabled), a { transition-duration: 140ms; }
+[role="progressbar"] > div { transition: width 160ms ease-out, transform 160ms ease-out; }
+[role="dialog"][data-state="open"], [role="menu"][data-state="open"] { animation: gv-enter 160ms ease-out; }
+
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
